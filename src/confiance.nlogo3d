@@ -3,28 +3,54 @@
 ;; | =============================
 globals [ radius ]
 
+
+;; | =====================================
+;; | ========== CLASS VARIABLES ==========
+;; | =====================================
+turtles-own [ role ratings ]
+
+
 ;; | ================================
 ;; | ========== SETUP & GO ==========
 ;; | ================================
 
 to setup
   clear-all
-  setup-globals
-  create-turtles number-of-agents [ set-random-sphere-position ]
+  set-globals
+
   reset-ticks
 end
 
 to go
-
+  show "running"
 end
+
+;; | ===================================
+;; | ========== SETUP RELATED ==========
+;; | ===================================
+
+to set-globals
+  set radius (world-width - 2) / 2
+end
+
+to spawn-agents
+  create-turtles number-of-agents [
+    set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
+  ]
+end
+
+
+;; | ================================
+;; | ========== GO RELATED ==========
+;; | ================================
+
+
 
 ;; | ===============================
 ;; | ========== FUNCTIONS ==========
 ;; | ===============================
 
-to setup-globals
-  set radius (world-width - 2) / 2
-end
+
 
 ;; | =============================
 ;; | ========== HELPERS ==========
@@ -33,7 +59,7 @@ end
 ;; Set a turtle position to a random point in a sphere
 ;; From : https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
 ;; Uniform Distribution to prevent aggregation in center
-to set-random-sphere-position
+to set-xyz-inside-sphere
   let u (random-float 1000)
   let v (random-float 1)
 
