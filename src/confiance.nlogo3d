@@ -7,7 +7,7 @@ globals [ radius ]
 ;; | =====================================
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
-turtles-own [ role ratings ]
+turtles-own [ agent-type ratings ]
 
 
 ;; | ================================
@@ -52,9 +52,40 @@ end
 
 
 
-;; | =============================
-;; | ========== HELPERS ==========
-;; | =============================
+;; | ===================================
+;; | ========== CLASS-RELATED ==========
+;; | ===================================
+
+
+;; Add the given rating to turtle's rating list
+to add-rating [agentA agentB interaction value term]
+  set ratings lput (list agentA agentB interaction value term) ratings
+  show filter [ s -> first s != "t" ] ["hi" "there" "everyone"]
+end
+
+;; Return a list of rating matching given parameters
+;; If "any" is given as a parameter, the latter won't be used as a filter
+to-report query [agentA agentB interaction value term]
+  let useAgentA (agentA != "any")
+  let useAgentB (agentB != "any")
+  let useInteraction (interaction != "any")
+  let useValue (value != "any")
+  let useTerm (term != "any")
+
+  let response (
+    filter [ elt ->
+      (ifelse-value(useAgentA) [(item 0 elt) = agentA] [true]) and
+      (ifelse-value(useAgentB) [(item 1 elt) = agentB] [true]) and
+      (ifelse-value(useInteraction) [(item 2 elt) = interaction] [true]) and
+      (ifelse-value(useValue) [(item 3 elt) = value] [true]) and
+      (ifelse-value(useTerm) [(item 4 elt) = term] [true])
+    ] ratings )
+end
+
+;; | ===================================
+;; | ========== WORLD-RELATED ==========
+;; | ===================================
+
 
 ;; Set a turtle position to a random point in a sphere
 ;; From : https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
