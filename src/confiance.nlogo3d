@@ -32,15 +32,19 @@ end
 
 ;; Set a turtle position to a random point in a sphere
 ;; From : https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
+;; Uniform Distribution to prevent aggregation in center
 to set-random-sphere-position
-  let u (random-float 1)
+  let u (random-float 1000)
   let v (random-float 1)
+
   let theta (2 * pi * u)
   let phi (acos(2 * v - 1))
-  let r (random-float radius)
-  let x (r * sin(phi) * cos(theta))
-  let y (r * sin(phi) * sin(theta))
-  let z (r * cos(phi))
+
+  let r (random-float 1) ^ (1 / 3)
+
+  let x (r * sin(phi) * cos(theta)) * radius
+  let y (r * sin(phi) * sin(theta)) * radius
+  let z (r * cos(phi)) * radius
 
   setxyz x y z
 end
