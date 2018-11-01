@@ -1,4 +1,49 @@
+;; | =============================
+;; | ========== GLOBALS ==========
+;; | =============================
+globals [ radius ]
 
+;; | ================================
+;; | ========== SETUP & GO ==========
+;; | ================================
+
+to setup
+  clear-all
+  setup-globals
+  create-turtles number-of-agents [ set-random-sphere-position ]
+  reset-ticks
+end
+
+to go
+
+end
+
+;; | ===============================
+;; | ========== FUNCTIONS ==========
+;; | ===============================
+
+to setup-globals
+  set radius (world-width - 2) / 2
+end
+
+;; | =============================
+;; | ========== HELPERS ==========
+;; | =============================
+
+;; Set a turtle position to a random point in a sphere
+;; From : https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
+to set-random-sphere-position
+  let u (random-float 1)
+  let v (random-float 1)
+  let theta (2 * pi * u)
+  let phi (acos(2 * v - 1))
+  let r (random-float radius)
+  let x (r * sin(phi) * cos(theta))
+  let y (r * sin(phi) * sin(theta))
+  let z (r * cos(phi))
+
+  setxyz x y z
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
@@ -28,6 +73,71 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
+
+BUTTON
+10
+33
+73
+66
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+122
+33
+185
+66
+NIL
+go\n
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+TEXTBOX
+74
+10
+126
+28
+ACTIONS
+11
+105.0
+1
+
+TEXTBOX
+66
+87
+135
+105
+PARAMETERS\n
+11
+104.0
+1
+
+INPUTBOX
+11
+109
+107
+169
+number-of-agents
+1000.0
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
