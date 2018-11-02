@@ -44,7 +44,6 @@ to go
     while [current-round < number-of-rounds][
         set current-round (current-round + 1)
         interaction-round
-        show "running"
     ]
 end
 
@@ -58,18 +57,19 @@ to set-globals
 end
 
 to spawn-providers [number]
-  create-turtles number [
-    set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-    set color (shaded-color providers-color)
-    set shape "house"
+    create-providers number [
+        set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
+        set color (shaded-color providers-color)
+        set shape providers-shape
   ]
 end
 
 to spawn-consumers [number]
-  create-turtles number [
-    set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-    set color (shaded-color consumers-color)
-    set shape "person"
+    create-consumers number [
+        set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
+        set color (shaded-color consumers-color)
+        set activity-level (random-float-range min-activity-level max-activity-level)
+        set shape consumers-shape
   ]
 end
 
@@ -107,13 +107,19 @@ end
 
 
 
+;; | ==============================
+;; | ========== FORMULAS ==========
+;; | ==============================
+
+
+
 ;; | ===================================
 ;; | ========== CLASS-RELATED ==========
 ;; | ===================================
 
 ;; Add the given rating to turtle's rating list
 to add-rating [rating]
-  set ratings (fput rating ratings)
+  set ratings ( sublist (fput rating ratings) 0 history-size)
 end
 
 
@@ -183,6 +189,17 @@ end
 ;; Return the selected provider based on the trust model. See 137-138p.
 to-report select-provider-trust-model [providers-list]
     report one-of providers-list
+
+    ;; ===== STEP I =====
+    ;; Compute trustworthiness of each provides
+    ;; if computable
+    ;;    add to HasTrustValue
+    ;; else
+    ;;    add to NoTrustValue
+
+    ;; ===== STEP II =====
+    ;; If one is empty, choose the other
+    ;; else, exploitation-exploration problematic
 end
 
 
@@ -193,6 +210,11 @@ to sent-rating [agent rating]
     ]
 end
 
+;; Return an utility gain based on provider's service quality
+to-report use-service [_provider]
+    let utility-gain 0
+    report utility-gain
+end
 
 
 ;; | ===================================
@@ -228,7 +250,15 @@ to-report increment [value]
 end
 
 to-report shaded-color [value]
-  report (value - 2 + random 5)
+  report (value - 1 + random-float 3)
+end
+
+to-report random-float-range [_min _max]
+    report (random-float (_max - _min) + _min)
+end
+
+to-report random-range [_min _max]
+    report (random (_max - _min) + _min)
 end
 
 ;; | ===============================
@@ -238,8 +268,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-439
-460
+541
+542
 -1
 -1
 13.0
@@ -252,12 +282,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
--16
-16
+-40
+40
+-40
+40
+-40
+40
 1
 0
 1
@@ -330,10 +360,10 @@ number-of-providers
 Number
 
 INPUTBOX
-398
-34
-497
-94
+428
+36
+527
+96
 number-of-rounds
 500.0
 1
@@ -352,20 +382,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-384
-14
-534
-32
+416
+16
+566
+34
 PARAMETERS - SIMULATION\n
 11
 104.0
 1
 
 INPUTBOX
-91
-284
-174
-344
+49
+353
+132
+413
 providers-color
 15.0
 1
@@ -373,35 +403,197 @@ providers-color
 Color
 
 TEXTBOX
-68
-257
-218
-275
+69
+326
+219
+344
 PARAMETERS - PROVIDERS
 11
 104.0
 1
 
 TEXTBOX
-387
-257
-537
-275
+413
+331
+563
+349
 PARAMETERS - CONSUMERS
 11
 104.0
 1
 
 INPUTBOX
-406
-283
-499
-343
+388
+354
+481
+414
 consumers-color
 105.0
 1
 0
 Color
+
+SLIDER
+308
+418
+480
+451
+min-activity-level
+min-activity-level
+0
+1
+0.25
+0.01
+1
+%
+HORIZONTAL
+
+SLIDER
+483
+418
+658
+451
+max-activity-level
+max-activity-level
+0
+1
+1.0
+0.01
+1
+%
+HORIZONTAL
+
+INPUTBOX
+298
+100
+417
+160
+recency-scaling-factor
+7.21347520444
+1
+0
+Number
+
+INPUTBOX
+17
+190
+86
+250
+history-size
+30.0
+1
+0
+Number
+
+INPUTBOX
+421
+100
+512
+160
+branching-factor
+2.0
+1
+0
+Number
+
+INPUTBOX
+516
+100
+671
+160
+referral-length-threshold
+5.0
+1
+0
+Number
+
+INPUTBOX
+296
+166
+417
+226
+interaction-trust-coeff
+2.0
+1
+0
+Number
+
+INPUTBOX
+421
+166
+543
+226
+witness-reputation-coeff
+2.0
+1
+0
+Number
+
+INPUTBOX
+546
+166
+675
+226
+certified-reputation-coeff
+0.5
+1
+0
+Number
+
+INPUTBOX
+295
+230
+430
+290
+interaction-trust-reliability
+0.69314718056
+1
+0
+Number
+
+INPUTBOX
+431
+230
+578
+290
+witness-reputation-reliability
+0.69314718056
+1
+0
+Number
+
+INPUTBOX
+580
+230
+730
+290
+certified-reputation-reliability
+0.69314718056
+1
+0
+Number
+
+INPUTBOX
+484
+354
+578
+414
+consumers-shape
+person
+1
+0
+String
+
+INPUTBOX
+136
+353
+221
+413
+providers-shape
+house
+1
+0
+String
 
 @#$#@#$#@
 ## WHAT IS IT?
