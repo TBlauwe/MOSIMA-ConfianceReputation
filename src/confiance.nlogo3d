@@ -17,15 +17,15 @@ breed [consumers consumer]
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
 providers-own [
-    radiusOfOperation     ;;
-    ratings               ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+    radius-of-operation     ;;
+    ratings                 ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
 ]
 
 consumers-own [
-    activity-level        ;; Probability to request a service, set randomly at spawn
-    radiusOfOperation     ;;
-    ratings               ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
-    selection-process     ;; Which method should be used to select a provider (random or trust model)
+    activity-level          ;; Probability to request a service, set randomly at spawn
+    radius-of-operation     ;;
+    ratings                 ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+    selection-process       ;; Which method should be used to select a provider (random or trust model)
 ]
 
 ;; | ================================
@@ -69,6 +69,7 @@ to spawn-consumers [number]
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
         set color (shaded-color consumers-color)
         set activity-level (random-float-range min-activity-level max-activity-level)
+        set radius-of-operation 
         set shape consumers-shape
   ]
 end
@@ -126,7 +127,7 @@ end
 ;; Return a list of providers in radius of operation
 ;; TODO - If none is relevant, ask neighbour recursively until one is found
 to-report find-relevant-providers
-  let providers-list (other providers in-radius (radiusOfOperation))
+  let providers-list (other providers in-radius (radius-of-operation))
   report providers-list
 end
 
@@ -360,10 +361,10 @@ number-of-providers
 Number
 
 INPUTBOX
-264
-792
-363
-852
+261
+903
+360
+963
 number-of-rounds
 500.0
 1
@@ -382,20 +383,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-231
-754
-407
-788
+228
+865
+404
+899
 PARAMETERS - SIMULATION\n
 14
 104.0
 1
 
 INPUTBOX
-232
-558
-315
-618
+229
+669
+312
+729
 providers-color
 15.0
 1
@@ -403,30 +404,30 @@ providers-color
 Color
 
 TEXTBOX
-232
-524
-405
-542
+229
+635
+402
+653
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-230
-304
-423
-342
+227
+415
+420
+453
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 INPUTBOX
-228
-343
-321
-403
+225
+454
+318
+514
 consumers-color
 105.0
 1
@@ -434,10 +435,10 @@ consumers-color
 Color
 
 SLIDER
-149
-419
-321
-452
+146
+530
+318
+563
 min-activity-level
 min-activity-level
 0
@@ -449,10 +450,10 @@ min-activity-level
 HORIZONTAL
 
 SLIDER
-324
-419
-499
-452
+321
+530
+496
+563
 max-activity-level
 max-activity-level
 0
@@ -464,10 +465,10 @@ max-activity-level
 HORIZONTAL
 
 INPUTBOX
-139
-881
-258
-941
+136
+992
+255
+1052
 recency-scaling-factor
 7.21347520444
 1
@@ -486,10 +487,10 @@ history-size
 Number
 
 INPUTBOX
-262
-881
-353
-941
+259
+992
+350
+1052
 branching-factor
 2.0
 1
@@ -497,10 +498,10 @@ branching-factor
 Number
 
 INPUTBOX
-357
-881
-512
-941
+354
+992
+509
+1052
 referral-length-threshold
 5.0
 1
@@ -508,10 +509,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-128
-979
-249
-1039
+125
+1090
+246
+1150
 interaction-trust-coeff
 2.0
 1
@@ -519,10 +520,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-253
-979
-375
-1039
+250
+1090
+372
+1150
 witness-reputation-coeff
 2.0
 1
@@ -530,10 +531,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-378
-979
-507
-1039
+375
+1090
+504
+1150
 certified-reputation-coeff
 0.5
 1
@@ -541,10 +542,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-107
-1079
-242
-1139
+104
+1190
+239
+1250
 interaction-trust-reliability
 0.69314718056
 1
@@ -552,10 +553,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-243
-1079
-390
-1139
+240
+1190
+387
+1250
 witness-reputation-reliability
 0.69314718056
 1
@@ -563,10 +564,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-392
-1079
-542
-1139
+389
+1190
+539
+1250
 certified-reputation-reliability
 0.69314718056
 1
@@ -574,10 +575,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-324
-343
-418
-403
+321
+454
+415
+514
 consumers-shape
 person
 1
@@ -585,10 +586,10 @@ person
 String
 
 INPUTBOX
-319
-558
-404
-618
+316
+669
+401
+729
 providers-shape
 house
 1
@@ -596,10 +597,10 @@ house
 String
 
 TEXTBOX
-56
-483
-614
-501
+53
+594
+611
+612
 ---------------------------------------------------------------------
 25
 104.0
@@ -626,10 +627,10 @@ TEXTBOX
 1
 
 TEXTBOX
-48
-267
-612
-288
+45
+378
+609
+399
 ---------------------------------------------------------------------
 25
 104.0
@@ -646,10 +647,10 @@ TEXTBOX
 1
 
 TEXTBOX
-59
-720
-610
-738
+56
+831
+607
+849
 ---------------------------------------------------------------------
 25
 104.0
@@ -657,13 +658,43 @@ TEXTBOX
 
 TEXTBOX
 52
-1192
+1258
 608
-1217
+1283
 ---------------------------------------------------------------------
 25
 104.0
 1
+
+SLIDER
+127
+262
+323
+295
+min-radius-of-operation
+min-radius-of-operation
+0
+1
+0.01
+0.01
+1
+%
+HORIZONTAL
+
+SLIDER
+338
+261
+543
+294
+max-radius-of-operation
+max-radius-of-operation
+0
+1
+0.02
+0.01
+1
+%
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
