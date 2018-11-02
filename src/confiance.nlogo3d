@@ -1,14 +1,28 @@
 ;; | =============================
 ;; | ========== GLOBALS ==========
 ;; | =============================
-globals [ radius ]
+globals [
+  radius               ;; Radius of the spherical world
+  current-round        ;; Current round value (number of iterating round) - Used as a time value
+]
 
+
+;; | =============================
+;; | ========== GLOBALS ==========
+;; | =============================
+breed [providers provider]
+breed [consumers consumer]
 
 ;; | =====================================
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
-turtles-own [ agent-type ratings ]
+providers-own [ radiusOfOperation ratings ]
 
+consumers-own [
+  selection-process     ;; Which method should be used to select a provider (random or trust model)
+  radiusOfOperation     ;;
+  ratings
+]
 
 ;; | ================================
 ;; | ========== SETUP & GO ==========
@@ -17,11 +31,12 @@ turtles-own [ agent-type ratings ]
 to setup
   clear-all
   set-globals
-
+  spawn-agents
   reset-ticks
 end
 
 to go
+  interaction-round
   show "running"
 end
 
@@ -31,6 +46,7 @@ end
 
 to set-globals
   set radius (world-width - 2) / 2
+  set current-round 0
 end
 
 to spawn-agents
@@ -44,6 +60,18 @@ end
 ;; | ========== GO RELATED ==========
 ;; | ================================
 
+to interaction-round
+  set current-round (current-round + 1)
+
+  ;; If a consumer needs a service, search for a provider
+  ask consumers[
+    if(need-service?)[
+      let providers-list (find-relevant-providers)
+      let choosen-provider (select-provider providers-list)
+    ]
+  ]
+
+end
 
 
 ;; | ===============================
@@ -59,8 +87,31 @@ end
 
 ;; Add the given rating to turtle's rating list
 to add-rating [agentA agentB interaction value term]
-  set ratings lput (list agentA agentB interaction value term) ratings
+  set ratings (lput (list agentA agentB interaction value term) ratings)
   show filter [ s -> first s != "t" ] ["hi" "there" "everyone"]
+end
+
+;; Return the selected provider by the process. The selection process relies on the agent's trust model to decide
+;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
+;; select a provider from the list.
+to-report select-provider [providers-list]
+    ifelse (selection-process != "random") [
+        report select-provider-trust-model (providers-list)
+    ][
+        report one-of providers-list 
+    ]
+end
+
+;; Return the selected provider based on the trust model. See 137-138p.
+to-report select-provider-trust-model [providers-list]
+    report one-of providers-list 
+end 
+
+;; Return a list of providers in radius of operation
+;; TODO - If none is relevant, ask neighbour recursively until one is found
+to-report find-relevant-providers
+  let providers-list (other providers in-radius (radiusOfOperation))
+  report providers-list
 end
 
 ;; Return a list of rating matching given parameters
@@ -80,6 +131,12 @@ to-report query [agentA agentB interaction value term]
       (ifelse-value(useValue) [(item 3 elt) = value] [true]) and
       (ifelse-value(useTerm) [(item 4 elt) = term] [true])
     ] ratings )
+  report response
+end
+
+to-report need-service?
+  let need false
+  report need
 end
 
 ;; | ===================================
@@ -105,6 +162,19 @@ to set-xyz-inside-sphere
 
   setxyz x y z
 end
+
+;; | =============================
+;; | ========== HELPERS ==========
+;; | =============================
+
+to-report increment [value]
+  report (value + 1)
+end
+
+;; | ===============================
+;; | ========== INTERFACE ==========
+;; | ===============================
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
@@ -195,7 +265,7 @@ INPUTBOX
 107
 169
 number-of-agents
-1000.0
+0.0
 1
 0
 Number
