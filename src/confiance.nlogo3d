@@ -60,14 +60,16 @@ end
 to spawn-providers [number]
   create-turtles number [
     set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-    set color providers-color
+    set color (shaded-color providers-color)
+    set shape "house"
   ]
 end
 
 to spawn-consumers [number]
   create-turtles number [
     set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-    set color consumers-color 
+    set color (shaded-color consumers-color)
+    set shape "person"
   ]
 end
 
@@ -225,6 +227,10 @@ to-report increment [value]
   report (value + 1)
 end
 
+to-report shaded-color [value]
+  report (value - 2 + random 5)
+end
+
 ;; | ===============================
 ;; | ========== INTERFACE ==========
 ;; | ===============================
@@ -318,7 +324,7 @@ INPUTBOX
 120
 183
 number-of-providers
-500.0
+100.0
 1
 0
 Number
