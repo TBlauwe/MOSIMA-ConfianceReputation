@@ -16,12 +16,16 @@ breed [consumers consumer]
 ;; | =====================================
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
-providers-own [ radiusOfOperation ratings ]
+providers-own [
+    radiusOfOperation     ;;
+    ratings               ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+]
 
 consumers-own [
-  selection-process     ;; Which method should be used to select a provider (random or trust model)
-  radiusOfOperation     ;;
-  ratings
+    activity-level        ;; Probability to request a service, set randomly at spawn
+    radiusOfOperation     ;;
+    ratings               ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+    selection-process     ;; Which method should be used to select a provider (random or trust model)
 ]
 
 ;; | ================================
@@ -31,13 +35,17 @@ consumers-own [
 to setup
   clear-all
   set-globals
-  spawn-agents
+  spawn-providers number-of-providers
+  spawn-consumers number-of-consumers
   reset-ticks
 end
 
 to go
-  interaction-round
-  show "running"
+    while [current-round < number-of-rounds][
+        set current-round (current-round + 1)
+        interaction-round
+        show "running"
+    ]
 end
 
 ;; | ===================================
@@ -49,9 +57,17 @@ to set-globals
   set current-round 0
 end
 
-to spawn-agents
-  create-turtles number-of-agents [
+to spawn-providers [number]
+  create-turtles number [
     set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
+    set color providers-color
+  ]
+end
+
+to spawn-consumers [number]
+  create-turtles number [
+    set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
+    set color consumers-color 
   ]
 end
 
@@ -61,16 +77,25 @@ end
 ;; | ================================
 
 to interaction-round
-  set current-round (current-round + 1)
+    ;; If a consumer needs a service, search for a provider
+    ask consumers[
+        if(need-service?)[
 
-  ;; If a consumer needs a service, search for a provider
-  ask consumers[
-    if(need-service?)[
-      let providers-list (find-relevant-providers)
-      let choosen-provider (select-provider providers-list)
+            ;; Find relevant providers
+            let providers-list find-relevant-providers
+
+            ;; Choose one according to the selection process
+            let choosen-provider (select-provider providers-list)
+
+            ;; Interact
+
+            ;; Rate
+            let rating (rate choosen-provider 0 0)
+
+            ;; Inform provider of his rating
+            sent-rating choosen-provider rating
+        ]
     ]
-  ]
-
 end
 
 
@@ -84,28 +109,11 @@ end
 ;; | ========== CLASS-RELATED ==========
 ;; | ===================================
 
-
 ;; Add the given rating to turtle's rating list
-to add-rating [agentA agentB interaction value term]
-  set ratings (lput (list agentA agentB interaction value term) ratings)
-  show filter [ s -> first s != "t" ] ["hi" "there" "everyone"]
+to add-rating [rating]
+  set ratings (fput rating ratings)
 end
 
-;; Return the selected provider by the process. The selection process relies on the agent's trust model to decide
-;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
-;; select a provider from the list.
-to-report select-provider [providers-list]
-    ifelse (selection-process != "random") [
-        report select-provider-trust-model (providers-list)
-    ][
-        report one-of providers-list 
-    ]
-end
-
-;; Return the selected provider based on the trust model. See 137-138p.
-to-report select-provider-trust-model [providers-list]
-    report one-of providers-list 
-end 
 
 ;; Return a list of providers in radius of operation
 ;; TODO - If none is relevant, ask neighbour recursively until one is found
@@ -113,6 +121,20 @@ to-report find-relevant-providers
   let providers-list (other providers in-radius (radiusOfOperation))
   report providers-list
 end
+
+
+;; Should the consumer ask for a service ?
+to-report need-service?
+  let need false
+  report need
+end
+
+
+;; Return a rating based on parameters
+to-report new-rating [agentA agentB interaction value term]
+    report (list agentA agentB interaction value term)
+end
+
 
 ;; Return a list of rating matching given parameters
 ;; If "any" is given as a parameter, the latter won't be used as a filter
@@ -134,10 +156,42 @@ to-report query [agentA agentB interaction value term]
   report response
 end
 
-to-report need-service?
-  let need false
-  report need
+
+;; rate a provider and return the rating
+to-report rate [other-agent interaction term]
+    let value 0
+    let rating new-rating self other-agent interaction value term
+    add-rating rating
+    report rating
 end
+
+
+;; Return the selected provider by the process. The selection process relies on the agent's trust model to decide
+;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
+;; select a provider from the list.
+to-report select-provider [providers-list]
+    ifelse (selection-process != "random") [
+        report select-provider-trust-model providers-list
+    ][
+        report one-of providers-list
+    ]
+end
+
+
+;; Return the selected provider based on the trust model. See 137-138p.
+to-report select-provider-trust-model [providers-list]
+    report one-of providers-list
+end
+
+
+;; Inform the agent of his rating
+to sent-rating [agent rating]
+    ask agent [
+        add-rating rating
+    ]
+end
+
+
 
 ;; | ===================================
 ;; | ========== WORLD-RELATED ==========
@@ -174,7 +228,6 @@ end
 ;; | ===============================
 ;; | ========== INTERFACE ==========
 ;; | ===============================
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
@@ -206,10 +259,10 @@ ticks
 30.0
 
 BUTTON
-10
-33
-73
-66
+63
+35
+126
+68
 NIL
 setup
 NIL
@@ -223,10 +276,10 @@ NIL
 1
 
 BUTTON
-122
-33
-185
-66
+134
+35
+197
+68
 NIL
 go\n
 T
@@ -240,35 +293,109 @@ NIL
 1
 
 TEXTBOX
-74
-10
-126
-28
+112
+12
+164
+30
 ACTIONS
 11
 105.0
 1
 
 TEXTBOX
-66
-87
-135
-105
-PARAMETERS\n
+77
+99
+201
+127
+PARAMETERS - AGENTS\n
 11
 104.0
 1
 
 INPUTBOX
-11
-109
-107
-169
-number-of-agents
-0.0
+16
+123
+120
+183
+number-of-providers
+500.0
 1
 0
 Number
+
+INPUTBOX
+398
+34
+497
+94
+number-of-rounds
+500.0
+1
+0
+Number
+
+INPUTBOX
+130
+123
+248
+183
+number-of-consumers
+500.0
+1
+0
+Number
+
+TEXTBOX
+384
+14
+534
+32
+PARAMETERS - SIMULATION\n
+11
+104.0
+1
+
+INPUTBOX
+91
+284
+174
+344
+providers-color
+15.0
+1
+0
+Color
+
+TEXTBOX
+68
+257
+218
+275
+PARAMETERS - PROVIDERS
+11
+104.0
+1
+
+TEXTBOX
+387
+257
+537
+275
+PARAMETERS - CONSUMERS
+11
+104.0
+1
+
+INPUTBOX
+406
+283
+499
+343
+consumers-color
+105.0
+1
+0
+Color
 
 @#$#@#$#@
 ## WHAT IS IT?
