@@ -295,10 +295,10 @@ ticks
 30.0
 
 BUTTON
-63
-35
-126
-68
+252
+55
+315
+88
 NIL
 setup
 NIL
@@ -312,10 +312,10 @@ NIL
 1
 
 BUTTON
-134
-35
-197
-68
+323
+55
+386
+88
 NIL
 go\n
 T
@@ -329,30 +329,30 @@ NIL
 1
 
 TEXTBOX
-112
-12
-164
-30
+294
+13
+354
+31
 ACTIONS
-11
-105.0
+14
+104.0
 1
 
 TEXTBOX
-77
-99
-201
-127
+253
+139
+403
+157
 PARAMETERS - AGENTS\n
-11
+14
 104.0
 1
 
 INPUTBOX
-16
-123
-120
-183
+148
+184
+252
+244
 number-of-providers
 100.0
 1
@@ -360,10 +360,10 @@ number-of-providers
 Number
 
 INPUTBOX
-428
-36
-527
-96
+264
+792
+363
+852
 number-of-rounds
 500.0
 1
@@ -371,10 +371,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-130
-123
-248
+268
 183
+386
+243
 number-of-consumers
 500.0
 1
@@ -382,20 +382,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-416
-16
-566
-34
+231
+754
+407
+788
 PARAMETERS - SIMULATION\n
-11
+14
 104.0
 1
 
 INPUTBOX
-49
-353
-132
-413
+232
+558
+315
+618
 providers-color
 15.0
 1
@@ -403,30 +403,30 @@ providers-color
 Color
 
 TEXTBOX
-69
-326
-219
-344
+232
+524
+405
+542
 PARAMETERS - PROVIDERS
-11
+14
 104.0
 1
 
 TEXTBOX
-413
-331
-563
-349
+230
+304
+423
+342
 PARAMETERS - CONSUMERS
-11
+15
 104.0
 1
 
 INPUTBOX
-388
-354
-481
-414
+228
+343
+321
+403
 consumers-color
 105.0
 1
@@ -434,25 +434,25 @@ consumers-color
 Color
 
 SLIDER
-308
-418
-480
-451
+149
+419
+321
+452
 min-activity-level
 min-activity-level
 0
 1
-0.25
+0.24
 0.01
 1
 %
 HORIZONTAL
 
 SLIDER
-483
-418
-658
-451
+324
+419
+499
+452
 max-activity-level
 max-activity-level
 0
@@ -464,10 +464,10 @@ max-activity-level
 HORIZONTAL
 
 INPUTBOX
-298
-100
-417
-160
+139
+881
+258
+941
 recency-scaling-factor
 7.21347520444
 1
@@ -475,10 +475,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-17
-190
-86
-250
+405
+182
+474
+242
 history-size
 30.0
 1
@@ -486,10 +486,10 @@ history-size
 Number
 
 INPUTBOX
-421
-100
-512
-160
+262
+881
+353
+941
 branching-factor
 2.0
 1
@@ -497,10 +497,10 @@ branching-factor
 Number
 
 INPUTBOX
-516
-100
-671
-160
+357
+881
+512
+941
 referral-length-threshold
 5.0
 1
@@ -508,10 +508,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-296
-166
-417
-226
+128
+979
+249
+1039
 interaction-trust-coeff
 2.0
 1
@@ -519,10 +519,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-421
-166
-543
-226
+253
+979
+375
+1039
 witness-reputation-coeff
 2.0
 1
@@ -530,10 +530,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-546
-166
-675
-226
+378
+979
+507
+1039
 certified-reputation-coeff
 0.5
 1
@@ -541,10 +541,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-295
-230
-430
-290
+107
+1079
+242
+1139
 interaction-trust-reliability
 0.69314718056
 1
@@ -552,10 +552,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-431
-230
-578
-290
+243
+1079
+390
+1139
 witness-reputation-reliability
 0.69314718056
 1
@@ -563,10 +563,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-580
-230
-730
-290
+392
+1079
+542
+1139
 certified-reputation-reliability
 0.69314718056
 1
@@ -574,10 +574,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-484
-354
-578
-414
+324
+343
+418
+403
 consumers-shape
 person
 1
@@ -585,15 +585,85 @@ person
 String
 
 INPUTBOX
-136
-353
-221
-413
+319
+558
+404
+618
 providers-shape
 house
 1
 0
 String
+
+TEXTBOX
+56
+483
+614
+501
+---------------------------------------------------------------------
+25
+104.0
+1
+
+TEXTBOX
+47
+103
+609
+123
+---------------------------------------------------------------------
+25
+104.0
+1
+
+TEXTBOX
+5
+10
+31
+3234
+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+25
+103.0
+1
+
+TEXTBOX
+48
+267
+612
+288
+---------------------------------------------------------------------
+25
+104.0
+1
+
+TEXTBOX
+631
+10
+653
+3234
+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+25
+104.0
+1
+
+TEXTBOX
+59
+720
+610
+738
+---------------------------------------------------------------------
+25
+104.0
+1
+
+TEXTBOX
+52
+1192
+608
+1217
+---------------------------------------------------------------------
+25
+104.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
