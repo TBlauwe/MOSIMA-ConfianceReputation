@@ -17,6 +17,7 @@ breed [consumers consumer]
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
 providers-own [
+    profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
     ratings                 ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
 ]
@@ -35,7 +36,10 @@ consumers-own [
 to setup
   clear-all
   set-globals
-  spawn-providers number-of-providers
+  spawn-providers number-of-good-providers "good"
+  spawn-providers number-of-ordinary-providers "ordinary"
+  spawn-providers number-of-intermittent-providers "intermittent"
+  spawn-providers number-of-bad-providers "bad"
   spawn-consumers number-of-consumers
   reset-ticks
 end
@@ -56,11 +60,13 @@ to set-globals
   set current-round 0
 end
 
-to spawn-providers [number]
+to spawn-providers [number _profile]
     create-providers number [
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
         set color (shaded-color providers-color)
         set shape providers-shape
+        set profile _profile
+        set ratings (list new-rating -1 -1 -1 -1 -1)
   ]
 end
 
@@ -69,8 +75,9 @@ to spawn-consumers [number]
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
         set color (shaded-color consumers-color)
         set activity-level (random-float-range min-activity-level max-activity-level)
-        set radius-of-operation 
+        set radius-of-operation (random-float-range min-radius-of-operation max-radius-of-operation)
         set shape consumers-shape
+        set ratings (list new-rating -1 -1 -1 -1 -1)
   ]
 end
 
@@ -87,16 +94,18 @@ to interaction-round
             ;; Find relevant providers
             let providers-list find-relevant-providers
 
-            ;; Choose one according to the selection process
-            let choosen-provider (select-provider providers-list)
+            if(count providers-list > 0)[
+                ;; Choose one according to the selection process
+                let choosen-provider (select-provider providers-list)
 
-            ;; Interact
+                ;; Interact
 
-            ;; Rate
-            let rating (rate choosen-provider 0 0)
+                ;; Rate
+                let rating (rate choosen-provider 0 0)
 
-            ;; Inform provider of his rating
-            sent-rating choosen-provider rating
+                ;; Inform provider of his rating
+                sent-rating choosen-provider rating
+            ]
         ]
     ]
 end
@@ -120,22 +129,20 @@ end
 
 ;; Add the given rating to turtle's rating list
 to add-rating [rating]
-  set ratings ( sublist (fput rating ratings) 0 history-size)
+  set ratings ( sublist (fput rating ratings) 0 (min (list history-size (length ratings))))
 end
 
 
 ;; Return a list of providers in radius of operation
 ;; TODO - If none is relevant, ask neighbour recursively until one is found
 to-report find-relevant-providers
-  let providers-list (other providers in-radius (radius-of-operation))
-  report providers-list
+  report (other providers in-radius (radius-of-operation))
 end
 
 
 ;; Should the consumer ask for a service ?
 to-report need-service?
-  let need false
-  report need
+  report dice activity-level 
 end
 
 
@@ -262,6 +269,10 @@ to-report random-range [_min _max]
     report (random (_max - _min) + _min)
 end
 
+to-report dice [probability]
+    report (random 1) <= probability
+end
+
 ;; | ===============================
 ;; | ========== INTERFACE ==========
 ;; | ===============================
@@ -296,10 +307,10 @@ ticks
 30.0
 
 BUTTON
-252
-55
-315
-88
+289
+52
+352
+85
 NIL
 setup
 NIL
@@ -313,10 +324,10 @@ NIL
 1
 
 BUTTON
-323
-55
-386
-88
+360
+52
+423
+85
 NIL
 go\n
 T
@@ -330,41 +341,30 @@ NIL
 1
 
 TEXTBOX
-294
-13
-354
-31
+331
+10
+391
+28
 ACTIONS
 14
 104.0
 1
 
 TEXTBOX
-253
-139
-403
-157
+290
+136
+440
+154
 PARAMETERS - AGENTS\n
 14
 104.0
 1
 
 INPUTBOX
-148
-184
-252
-244
-number-of-providers
-100.0
-1
-0
-Number
-
-INPUTBOX
-261
-903
-360
-963
+298
+900
+397
+960
 number-of-rounds
 500.0
 1
@@ -372,10 +372,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-268
-183
-386
-243
+80
+249
+198
+309
 number-of-consumers
 500.0
 1
@@ -383,20 +383,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-228
-865
-404
-899
+265
+862
+441
+896
 PARAMETERS - SIMULATION\n
 14
 104.0
 1
 
 INPUTBOX
-229
-669
-312
-729
+266
+666
+349
+726
 providers-color
 15.0
 1
@@ -404,30 +404,30 @@ providers-color
 Color
 
 TEXTBOX
-229
-635
-402
-653
+266
+632
+439
+650
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-227
-415
-420
-453
+264
+412
+457
+450
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 INPUTBOX
-225
-454
-318
-514
+262
+451
+355
+511
 consumers-color
 105.0
 1
@@ -435,25 +435,25 @@ consumers-color
 Color
 
 SLIDER
-146
-530
-318
-563
+183
+527
+355
+560
 min-activity-level
 min-activity-level
 0
 1
-0.24
+0.25
 0.01
 1
 %
 HORIZONTAL
 
 SLIDER
-321
-530
-496
-563
+358
+527
+533
+560
 max-activity-level
 max-activity-level
 0
@@ -465,10 +465,10 @@ max-activity-level
 HORIZONTAL
 
 INPUTBOX
-136
-992
-255
-1052
+173
+989
+292
+1049
 recency-scaling-factor
 7.21347520444
 1
@@ -476,21 +476,21 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-405
-182
-474
-242
+424
+251
+493
+311
 history-size
-30.0
+10.0
 1
 0
 Number
 
 INPUTBOX
-259
-992
-350
-1052
+296
+989
+387
+1049
 branching-factor
 2.0
 1
@@ -498,10 +498,10 @@ branching-factor
 Number
 
 INPUTBOX
-354
-992
-509
-1052
+391
+989
+546
+1049
 referral-length-threshold
 5.0
 1
@@ -509,10 +509,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-125
-1090
-246
-1150
+162
+1087
+283
+1147
 interaction-trust-coeff
 2.0
 1
@@ -520,10 +520,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-250
-1090
-372
-1150
+287
+1087
+409
+1147
 witness-reputation-coeff
 2.0
 1
@@ -531,10 +531,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-375
-1090
-504
-1150
+412
+1087
+541
+1147
 certified-reputation-coeff
 0.5
 1
@@ -542,10 +542,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-104
-1190
-239
-1250
+141
+1187
+276
+1247
 interaction-trust-reliability
 0.69314718056
 1
@@ -553,10 +553,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-240
-1190
-387
-1250
+277
+1187
+424
+1247
 witness-reputation-reliability
 0.69314718056
 1
@@ -564,10 +564,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-389
-1190
-539
-1250
+426
+1187
+576
+1247
 certified-reputation-reliability
 0.69314718056
 1
@@ -575,10 +575,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-321
-454
-415
-514
+358
+451
+452
+511
 consumers-shape
 person
 1
@@ -586,10 +586,10 @@ person
 String
 
 INPUTBOX
-316
-669
-401
-729
+353
+666
+438
+726
 providers-shape
 house
 1
@@ -597,20 +597,20 @@ house
 String
 
 TEXTBOX
-53
-594
-611
-612
+90
+591
+648
+609
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-47
-103
-609
-123
+84
+100
+646
+120
 ---------------------------------------------------------------------
 25
 104.0
@@ -627,19 +627,19 @@ TEXTBOX
 1
 
 TEXTBOX
-45
-378
-609
-399
+82
+375
+646
+396
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-631
+714
 10
-653
+736
 3234
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 25
@@ -647,30 +647,30 @@ TEXTBOX
 1
 
 TEXTBOX
-56
-831
-607
-849
+93
+828
+644
+846
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-52
-1258
-608
-1283
+89
+1255
+645
+1280
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 SLIDER
-127
-262
-323
-295
+142
+349
+337
+382
 min-radius-of-operation
 min-radius-of-operation
 0
@@ -682,10 +682,10 @@ min-radius-of-operation
 HORIZONTAL
 
 SLIDER
-338
-261
-543
-294
+363
+349
+557
+382
 max-radius-of-operation
 max-radius-of-operation
 0
@@ -695,6 +695,50 @@ max-radius-of-operation
 1
 %
 HORIZONTAL
+
+INPUTBOX
+79
+170
+212
+230
+number-of-good-providers
+10.0
+1
+0
+Number
+
+INPUTBOX
+218
+169
+366
+229
+number-of-ordinary-providers
+40.0
+1
+0
+Number
+
+INPUTBOX
+375
+170
+543
+230
+number-of-intermittent-providers
+5.0
+1
+0
+Number
+
+INPUTBOX
+546
+170
+674
+230
+number-of-bad-providers
+45.0
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
