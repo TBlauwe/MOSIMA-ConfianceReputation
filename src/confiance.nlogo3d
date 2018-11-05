@@ -19,14 +19,15 @@ breed [consumers consumer]
 providers-own [
     profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
-    ratings                 ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+    ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
 ]
 
 consumers-own [
     activity-level          ;; Probability to request a service, set randomly at spawn
     radius-of-operation     ;;
-    ratings                 ;; List of ratings in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value, 4 = Term)
+    ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
     selection-process       ;; Which method should be used to select a provider (random or trust model)
+    trust-model             ;; Which trust-model is used (NoTrust or FIRE)
 ]
 
 ;; | ================================
@@ -40,7 +41,8 @@ to setup
   spawn-providers number-of-ordinary-providers "ordinary"
   spawn-providers number-of-intermittent-providers "intermittent"
   spawn-providers number-of-bad-providers "bad"
-  spawn-consumers number-of-consumers
+  spawn-consumers number-of-consumers "NoTrust"
+  spawn-consumers number-of-consumers "FIRE"
   reset-ticks
 end
 
@@ -56,8 +58,8 @@ end
 ;; | ===================================
 
 to set-globals
-  set radius (world-width - 2) / 2
-  set current-round 0
+    set radius (world-width - 1) / 2
+    set current-round 0
 end
 
 to spawn-providers [number _profile]
@@ -66,18 +68,19 @@ to spawn-providers [number _profile]
         set color (shaded-color providers-color)
         set shape providers-shape
         set profile _profile
-        set ratings (list new-rating -1 -1 -1 -1 -1)
+        set ratings []
   ]
 end
 
-to spawn-consumers [number]
+to spawn-consumers [number _trust-model]
     create-consumers number [
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
         set color (shaded-color consumers-color)
         set activity-level (random-float-range min-activity-level max-activity-level)
-        set radius-of-operation (random-float-range min-radius-of-operation max-radius-of-operation)
+        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
         set shape consumers-shape
-        set ratings (list new-rating -1 -1 -1 -1 -1)
+        set ratings []
+        set trust-model _trust-model
   ]
 end
 
@@ -95,13 +98,14 @@ to interaction-round
             let providers-list find-relevant-providers
 
             if(count providers-list > 0)[
+
                 ;; Choose one according to the selection process
                 let choosen-provider (select-provider providers-list)
 
                 ;; Interact
 
                 ;; Rate
-                let rating (rate choosen-provider 0 0)
+                let rating (rate choosen-provider current-round)
 
                 ;; Inform provider of his rating
                 sent-rating choosen-provider rating
@@ -128,61 +132,78 @@ end
 ;; | ===================================
 
 ;; Add the given rating to turtle's rating list
-to add-rating [rating]
-  set ratings ( sublist (fput rating ratings) 0 (min (list history-size (length ratings))))
+to add-rating [agent rating]
+    let agent-ratings find-agent-ratings agent
+    let index position (list agent agent-ratings) ratings
+
+    ifelse(length agent-ratings = 0)[
+        set ratings fput (list agent (list rating)) ratings 
+    ][
+        set agent-ratings (sublist (fput rating agent-ratings) 0 (min (list history-size (length agent-ratings))))
+        set ratings replace-item index ratings (list agent agent-ratings)
+    ]
 end
 
 
-;; Return a list of providers in radius of operation
+;; Returns specified agent's ratings
+to-report find-agent-ratings [agent]
+    let results (filter [ elt -> (item 0 elt) = agent] ratings)
+    ifelse(length results > 0)[
+        report item 1 item 0 results
+    ][
+        report [] 
+    ]
+end
+
+
+;; Returns a list of providers in radius of operation
 ;; TODO - If none is relevant, ask neighbour recursively until one is found
 to-report find-relevant-providers
-  report (other providers in-radius (radius-of-operation))
+    report (other providers in-radius radius-of-operation)
 end
 
 
 ;; Should the consumer ask for a service ?
 to-report need-service?
-  report dice activity-level 
+  report dice activity-level
 end
 
 
-;; Return a rating based on parameters
-to-report new-rating [agentA agentB interaction value term]
-    report (list agentA agentB interaction value term)
+;; Returns a rating based on parameters
+to-report new-rating [agentA agentB interaction value]
+    report (list agentA agentB interaction value)
 end
 
 
-;; Return a list of rating matching given parameters
+;; Returns a list of rating matching given parameters
 ;; If "any" is given as a parameter, the latter won't be used as a filter
-to-report query [agentA agentB interaction value term]
+to-report query [agentA agentB interaction value]
   let useAgentA (agentA != "any")
   let useAgentB (agentB != "any")
   let useInteraction (interaction != "any")
   let useValue (value != "any")
-  let useTerm (term != "any")
 
   let response (
     filter [ elt ->
       (ifelse-value(useAgentA) [(item 0 elt) = agentA] [true]) and
       (ifelse-value(useAgentB) [(item 1 elt) = agentB] [true]) and
       (ifelse-value(useInteraction) [(item 2 elt) = interaction] [true]) and
-      (ifelse-value(useValue) [(item 3 elt) = value] [true]) and
-      (ifelse-value(useTerm) [(item 4 elt) = term] [true])
+      (ifelse-value(useValue) [(item 3 elt) = value] [true])
     ] ratings )
   report response
 end
 
 
 ;; rate a provider and return the rating
-to-report rate [other-agent interaction term]
+to-report rate [other-agent interaction]
     let value 0
-    let rating new-rating self other-agent interaction value term
-    add-rating rating
+    let rating (new-rating self other-agent interaction value)
+    add-rating other-agent rating
     report rating
 end
 
 
-;; Return the selected provider by the process. The selection process relies on the agent's trust model to decide
+;; Returns the selected provider by the process. The selection process relies on the agent's trust model to decide
 ;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
 ;; select a provider from the list.
 to-report select-provider [providers-list]
@@ -194,7 +215,7 @@ to-report select-provider [providers-list]
 end
 
 
-;; Return the selected provider based on the trust model. See 137-138p.
+;; Returns the selected provider based on the trust model. See 137-138p.
 to-report select-provider-trust-model [providers-list]
     report one-of providers-list
 
@@ -214,11 +235,12 @@ end
 ;; Inform the agent of his rating
 to sent-rating [agent rating]
     ask agent [
-        add-rating rating
+        add-rating agent rating
     ]
 end
 
-;; Return an utility gain based on provider's service quality
+
+;; Returns an utility gain based on provider's service quality
 to-report use-service [_provider]
     let utility-gain 0
     report utility-gain
@@ -270,7 +292,7 @@ to-report random-range [_min _max]
 end
 
 to-report dice [probability]
-    report (random 1) <= probability
+    report (random-float 1) <= probability
 end
 
 ;; | ===============================
@@ -294,12 +316,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--40
-40
--40
-40
--40
-40
+-50
+50
+-50
+50
+-50
+50
 1
 0
 1
@@ -669,14 +691,14 @@ TEXTBOX
 SLIDER
 142
 349
-337
+338
 382
 min-radius-of-operation
 min-radius-of-operation
 0
+100
+1.0
 1
-0.01
-0.01
 1
 %
 HORIZONTAL
@@ -684,14 +706,14 @@ HORIZONTAL
 SLIDER
 363
 349
-557
+564
 382
 max-radius-of-operation
 max-radius-of-operation
 0
+100
+2.0
 1
-0.02
-0.01
 1
 %
 HORIZONTAL
