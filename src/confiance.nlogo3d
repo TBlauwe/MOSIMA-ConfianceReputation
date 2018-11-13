@@ -23,6 +23,7 @@ providers-own [
 ]
 
 consumers-own [
+    utility-gain            ;;
     activity-level          ;; Probability to request a service, set randomly at spawn
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
@@ -47,10 +48,12 @@ to setup
 end
 
 to go
-    while [current-round < number-of-rounds][
+    print "Running"
+    if (current-round < number-of-rounds)[
         set current-round (current-round + 1)
         interaction-round
     ]
+    tick
 end
 
 ;; | ===================================
@@ -81,6 +84,7 @@ to spawn-consumers [number _trust-model]
         set shape consumers-shape
         set ratings []
         set trust-model _trust-model
+        set utility-gain 0
   ]
 end
 
@@ -137,7 +141,7 @@ to add-rating [agent rating]
     let index position (list agent agent-ratings) ratings
 
     ifelse(length agent-ratings = 0)[
-        set ratings fput (list agent (list rating)) ratings 
+        set ratings fput (list agent (list rating)) ratings
     ][
         set agent-ratings (sublist (fput rating agent-ratings) 0 (min (list history-size (length agent-ratings))))
         set ratings replace-item index ratings (list agent agent-ratings)
@@ -151,7 +155,7 @@ to-report find-agent-ratings [agent]
     ifelse(length results > 0)[
         report item 1 item 0 results
     ][
-        report [] 
+        report []
     ]
 end
 
@@ -242,8 +246,7 @@ end
 
 ;; Returns an utility gain based on provider's service quality
 to-report use-service [_provider]
-    let utility-gain 0
-    report utility-gain
+    report 0
 end
 
 
@@ -329,10 +332,10 @@ ticks
 30.0
 
 BUTTON
-289
-52
-352
-85
+304
+274
+367
+307
 NIL
 setup
 NIL
@@ -346,10 +349,10 @@ NIL
 1
 
 BUTTON
-360
-52
-423
-85
+375
+274
+438
+307
 NIL
 go\n
 T
@@ -363,30 +366,30 @@ NIL
 1
 
 TEXTBOX
-331
-10
-391
-28
+346
+232
+406
+250
 ACTIONS
 14
 104.0
 1
 
 TEXTBOX
-290
-136
-440
-154
+305
+358
+455
+376
 PARAMETERS - AGENTS\n
 14
 104.0
 1
 
 INPUTBOX
-298
-900
-397
-960
+301
+1121
+400
+1181
 number-of-rounds
 500.0
 1
@@ -394,10 +397,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-80
-249
-198
-309
+83
+470
+201
+530
 number-of-consumers
 500.0
 1
@@ -405,20 +408,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-265
-862
-441
-896
+268
+1083
+444
+1117
 PARAMETERS - SIMULATION\n
 14
 104.0
 1
 
 INPUTBOX
-266
-666
-349
-726
+269
+887
+352
+947
 providers-color
 15.0
 1
@@ -426,30 +429,30 @@ providers-color
 Color
 
 TEXTBOX
-266
-632
-439
-650
+269
+853
+442
+871
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-264
-412
-457
-450
+267
+633
+460
+671
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 INPUTBOX
-262
-451
-355
-511
+265
+672
+358
+732
 consumers-color
 105.0
 1
@@ -457,10 +460,10 @@ consumers-color
 Color
 
 SLIDER
-183
-527
-355
-560
+186
+748
+358
+781
 min-activity-level
 min-activity-level
 0
@@ -472,10 +475,10 @@ min-activity-level
 HORIZONTAL
 
 SLIDER
-358
-527
-533
-560
+361
+748
+536
+781
 max-activity-level
 max-activity-level
 0
@@ -487,10 +490,10 @@ max-activity-level
 HORIZONTAL
 
 INPUTBOX
-173
-989
-292
-1049
+176
+1210
+295
+1270
 recency-scaling-factor
 7.21347520444
 1
@@ -498,10 +501,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-424
-251
-493
-311
+427
+472
+496
+532
 history-size
 10.0
 1
@@ -509,10 +512,10 @@ history-size
 Number
 
 INPUTBOX
-296
-989
-387
-1049
+299
+1210
+390
+1270
 branching-factor
 2.0
 1
@@ -520,10 +523,10 @@ branching-factor
 Number
 
 INPUTBOX
-391
-989
-546
-1049
+394
+1210
+549
+1270
 referral-length-threshold
 5.0
 1
@@ -531,10 +534,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-162
-1087
-283
-1147
+165
+1308
+286
+1368
 interaction-trust-coeff
 2.0
 1
@@ -542,10 +545,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-287
-1087
-409
-1147
+290
+1308
+412
+1368
 witness-reputation-coeff
 2.0
 1
@@ -553,10 +556,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-412
-1087
-541
-1147
+415
+1308
+544
+1368
 certified-reputation-coeff
 0.5
 1
@@ -564,10 +567,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-141
-1187
-276
-1247
+144
+1408
+279
+1468
 interaction-trust-reliability
 0.69314718056
 1
@@ -575,10 +578,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-277
-1187
-424
-1247
+280
+1408
+427
+1468
 witness-reputation-reliability
 0.69314718056
 1
@@ -586,10 +589,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-426
-1187
-576
-1247
+429
+1408
+579
+1468
 certified-reputation-reliability
 0.69314718056
 1
@@ -597,10 +600,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-358
-451
-452
-511
+361
+672
+455
+732
 consumers-shape
 person
 1
@@ -608,10 +611,10 @@ person
 String
 
 INPUTBOX
-353
-666
-438
-726
+356
+887
+441
+947
 providers-shape
 house
 1
@@ -619,20 +622,20 @@ house
 String
 
 TEXTBOX
-90
-591
-648
-609
+93
+812
+651
+830
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-84
-100
-646
-120
+87
+321
+649
+341
 ---------------------------------------------------------------------
 25
 104.0
@@ -649,10 +652,10 @@ TEXTBOX
 1
 
 TEXTBOX
-82
-375
-646
-396
+85
+596
+649
+617
 ---------------------------------------------------------------------
 25
 104.0
@@ -669,60 +672,60 @@ TEXTBOX
 1
 
 TEXTBOX
-93
-828
-644
-846
+96
+1049
+647
+1067
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-89
-1255
-645
-1280
+92
+1476
+648
+1501
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 SLIDER
-142
-349
-338
-382
+145
+570
+341
+603
 min-radius-of-operation
 min-radius-of-operation
 0
 100
-1.0
+10.0
 1
 1
 %
 HORIZONTAL
 
 SLIDER
-363
-349
-564
-382
+366
+570
+567
+603
 max-radius-of-operation
 max-radius-of-operation
 0
 100
-2.0
+15.0
 1
 1
 %
 HORIZONTAL
 
 INPUTBOX
-79
-170
-212
-230
+82
+391
+215
+451
 number-of-good-providers
 10.0
 1
@@ -730,10 +733,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-218
-169
-366
-229
+221
+390
+369
+450
 number-of-ordinary-providers
 40.0
 1
@@ -741,10 +744,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-375
-170
-543
-230
+378
+391
+546
+451
 number-of-intermittent-providers
 5.0
 1
@@ -752,15 +755,44 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-546
-170
-674
-230
+549
+391
+677
+451
 number-of-bad-providers
 45.0
 1
 0
 Number
+
+TEXTBOX
+86
+199
+655
+217
+---------------------------------------------------------------------
+25
+104.0
+1
+
+PLOT
+276
+35
+476
+185
+UG Mean
+Interaction
+UG Mean
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"FIRE" 1.0 0 -5298144 true "" "plot mean [utility-gain] of consumers with [trust-model = \"FIRE\"]"
+"NoTrust" 1.0 0 -14439633 true "" "plot mean [utility-gain] of consumers with [trust-model = \"NoTrust\"]"
 
 @#$#@#$#@
 ## WHAT IS IT?
