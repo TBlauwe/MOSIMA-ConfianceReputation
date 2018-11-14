@@ -17,6 +17,7 @@ breed [consumers consumer]
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
 providers-own [
+    utility-gain            ;;
     profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
@@ -29,6 +30,7 @@ consumers-own [
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
     selection-process       ;; Which method should be used to select a provider (random or trust model)
     trust-model             ;; Which trust-model is used (NoTrust or FIRE)
+    interactions_counter     ;; Number of interaction
 ]
 
 ;; | ================================
@@ -72,6 +74,18 @@ to spawn-providers [number _profile]
         set shape providers-shape
         set profile _profile
         set ratings []
+        if (_profile = "good")[
+            set utility-gain random-normal 7.5 1.0
+        ]
+        if (_profile = "ordinary")[
+            set utility-gain random-normal 2.5 2.0
+        ]
+        if (_profile = "bad")[
+            set utility-gain random-normal -7.5 2.0
+        ]
+        if (_profile = "intermittent")[
+            set utility-gain random-float-range -5 5
+        ]
   ]
 end
 
@@ -85,6 +99,7 @@ to spawn-consumers [number _trust-model]
         set ratings []
         set trust-model _trust-model
         set utility-gain 0
+        set interactions_counter 0
   ]
 end
 
@@ -99,14 +114,15 @@ to interaction-round
         if(need-service?)[
 
             ;; Find relevant providers
-            let providers-list find-relevant-providers
+            let providers-list (find-providers (list who) (referral-length-threshold))
 
-            if(count providers-list > 0)[
+            if(length providers-list > 0)[
 
                 ;; Choose one according to the selection process
                 let choosen-provider (select-provider providers-list)
 
                 ;; Interact
+                let ug use-service choosen-provider
 
                 ;; Rate
                 let rating (rate choosen-provider current-round)
@@ -122,8 +138,6 @@ end
 ;; | ===============================
 ;; | ========== FUNCTIONS ==========
 ;; | ===============================
-
-
 
 ;; | ==============================
 ;; | ========== FORMULAS ==========
@@ -161,15 +175,41 @@ end
 
 
 ;; Returns a list of providers in radius of operation
-;; TODO - If none is relevant, ask neighbour recursively until one is found
-to-report find-relevant-providers
-    report (other providers in-radius radius-of-operation)
+;; If none is relevant, ask acquaintance to find one (recursive)
+to-report find-providers [excluded-agents length-threshold]
+
+    set excluded-agents (lput who excluded-agents)
+
+    ;; First - Is there any providers nearby ?
+    let _providers ([who] of (providers in-radius radius-of-operation))
+
+    ;; Even if we already have providers, let's get others nearby
+    if (length-threshold > 0)[
+
+        let acquaintances ([who] of ((other consumers in-radius radius-of-operation) with [not member? who excluded-agents]))
+
+        foreach acquaintances [ _acquaintance ->
+            set excluded-agents (lput _acquaintance excluded-agents)
+        ]
+
+        foreach acquaintances [ _acquaintance ->
+            let _acquaintance_providers ([find-providers (excluded-agents) (length-threshold - 1)] of consumer _acquaintance)
+
+            foreach _acquaintance_providers [ _provider ->
+                if (not member? _provider _providers)[
+                    set _providers (lput _provider _providers)
+                ]
+            ]
+        ]
+    ]
+
+    report _providers
 end
 
 
 ;; Should the consumer ask for a service ?
 to-report need-service?
-  report dice activity-level
+  report coin-flip activity-level
 end
 
 
@@ -238,7 +278,7 @@ end
 
 ;; Inform the agent of his rating
 to sent-rating [agent rating]
-    ask agent [
+    ask provider agent [
         add-rating agent rating
     ]
 end
@@ -246,7 +286,10 @@ end
 
 ;; Returns an utility gain based on provider's service quality
 to-report use-service [_provider]
-    report 0
+    let ug ([utility-gain] of provider _provider)
+    set interactions_counter (interactions_counter + 1)
+    set utility-gain (utility-gain + ug)
+    report ug
 end
 
 
@@ -294,7 +337,7 @@ to-report random-range [_min _max]
     report (random (_max - _min) + _min)
 end
 
-to-report dice [probability]
+to-report coin-flip [probability]
     report (random-float 1) <= probability
 end
 
@@ -791,8 +834,8 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 0 -5298144 true "" "plot mean [utility-gain] of consumers with [trust-model = \"FIRE\"]"
-"NoTrust" 1.0 0 -14439633 true "" "plot mean [utility-gain] of consumers with [trust-model = \"NoTrust\"]"
+"FIRE" 1.0 0 -5298144 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\"]"
+"NoTrust" 1.0 0 -14439633 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"NoTrust\"]"
 
 @#$#@#$#@
 ## WHAT IS IT?
