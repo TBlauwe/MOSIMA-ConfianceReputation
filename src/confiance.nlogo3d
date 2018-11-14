@@ -1,3 +1,4 @@
+extensions [profiler]
 ;; | =============================
 ;; | ========== GLOBALS ==========
 ;; | =============================
@@ -23,14 +24,16 @@ providers-own [
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
 ]
 
-consumers-own [
-    utility-gain            ;;
-    activity-level          ;; Probability to request a service, set randomly at spawn
-    radius-of-operation     ;;
-    ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
-    selection-process       ;; Which method should be used to select a provider (random or trust model)
-    trust-model             ;; Which trust-model is used (NoTrust or FIRE)
-    interactions_counter     ;; Number of interaction
+consumers-own                   [
+    utility-gain                ;;
+    ug                          ;; cache - last utility gained
+    activity-level              ;; Probability to request a service, set randomly at spawn
+    radius-of-operation         ;;
+    ratings                     ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
+    selection-process           ;; Which method should be used to select a provider (random or trust model)
+    trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
+    interactions_counter        ;; Number of interaction
+    failed_interactions_counter ;; Number of failed interaction (No providers found)
 ]
 
 ;; | ================================
@@ -40,21 +43,21 @@ consumers-own [
 to setup
   clear-all
   set-globals
-  spawn-providers number-of-good-providers "good"
-  spawn-providers number-of-ordinary-providers "ordinary"
-  spawn-providers number-of-intermittent-providers "intermittent"
-  spawn-providers number-of-bad-providers "bad"
-  spawn-consumers number-of-consumers "NoTrust"
-  spawn-consumers number-of-consumers "FIRE"
+  spawn-providers number-of-good-providers "good" 105
+  spawn-providers number-of-ordinary-providers "ordinary" 85
+  spawn-providers number-of-intermittent-providers "intermittent" 125
+  spawn-providers number-of-bad-providers "bad" 135
+  spawn-consumers number-of-consumers "NoTrust" 65
+  spawn-consumers number-of-consumers "FIRE" 15
   reset-ticks
 end
 
 to go
-    print "Running"
-    if (current-round < number-of-rounds)[
-        set current-round (current-round + 1)
-        interaction-round
-    ]
+    if (current-round >= number-of-rounds)
+        [stop]
+
+    set current-round (current-round + 1)
+    interaction-round
     tick
 end
 
@@ -63,17 +66,20 @@ end
 ;; | ===================================
 
 to set-globals
-    set radius (world-width - 1) / 2
+    ;;set radius (world-width - 1) / 2
+    set radius 0.5 
     set current-round 0
 end
 
-to spawn-providers [number _profile]
+to spawn-providers [number _profile _color]
     create-providers number [
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-        set color (shaded-color providers-color)
+        set color (shaded-color _color)
         set shape providers-shape
         set profile _profile
         set ratings []
+        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
+        set size 0.025
         if (_profile = "good")[
             set utility-gain random-normal 7.5 1.0
         ]
@@ -89,16 +95,18 @@ to spawn-providers [number _profile]
   ]
 end
 
-to spawn-consumers [number _trust-model]
+to spawn-consumers [number _trust-model _color]
     create-consumers number [
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
-        set color (shaded-color consumers-color)
+        set color (shaded-color _color)
         set activity-level (random-float-range min-activity-level max-activity-level)
         set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
         set shape consumers-shape
+        set size 0.025
         set ratings []
         set trust-model _trust-model
         set utility-gain 0
+        set ug 0
         set interactions_counter 0
   ]
 end
@@ -110,19 +118,20 @@ end
 
 to interaction-round
     ;; If a consumer needs a service, search for a provider
+    profiler:start
     ask consumers[
         if(need-service?)[
 
             ;; Find relevant providers
             let providers-list (find-providers (list who) (referral-length-threshold))
 
-            if(length providers-list > 0)[
+            ifelse(length providers-list > 0)[
 
                 ;; Choose one according to the selection process
                 let choosen-provider (select-provider providers-list)
 
                 ;; Interact
-                let ug use-service choosen-provider
+                use-service choosen-provider
 
                 ;; Rate
                 let rating (new-rating (who) (choosen-provider) (current-round) (ug))
@@ -130,9 +139,15 @@ to interaction-round
 
                 ;; Inform provider of his rating
                 sent-rating choosen-provider rating
+            ][
+                set failed_interactions_counter (failed_interactions_counter + 1)
             ]
         ]
     ]
+    profiler:stop
+    print profiler:report
+    profiler:reset
+
 end
 
 
@@ -287,11 +302,10 @@ end
 
 
 ;; Returns an utility gain based on provider's service quality
-to-report use-service [_provider]
-    let ug ([utility-gain] of provider _provider)
+to use-service [_provider]
+    set ug ([utility-gain] of provider _provider)
     set interactions_counter (interactions_counter + 1)
     set utility-gain (utility-gain + ug)
-    report ug
 end
 
 
@@ -350,8 +364,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-541
-542
+47
+48
 -1
 -1
 13.0
@@ -364,12 +378,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--50
-50
--50
-50
--50
-50
+-1
+1
+-1
+1
+-1
+1
 1
 0
 1
@@ -377,10 +391,10 @@ ticks
 30.0
 
 BUTTON
-304
-274
-367
-307
+298
+469
+361
+502
 NIL
 setup
 NIL
@@ -394,10 +408,10 @@ NIL
 1
 
 BUTTON
-375
-274
-438
-307
+369
+469
+432
+502
 NIL
 go\n
 T
@@ -411,30 +425,30 @@ NIL
 1
 
 TEXTBOX
-346
-232
-406
-250
+340
+427
+400
+445
 ACTIONS
 14
 104.0
 1
 
 TEXTBOX
-305
-358
-455
-376
+299
+553
+449
+571
 PARAMETERS - AGENTS\n
 14
 104.0
 1
 
 INPUTBOX
-301
-1121
-400
-1181
+295
+1316
+394
+1376
 number-of-rounds
 500.0
 1
@@ -442,10 +456,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-83
-470
-201
-530
+77
+665
+195
+725
 number-of-consumers
 500.0
 1
@@ -453,20 +467,20 @@ number-of-consumers
 Number
 
 TEXTBOX
-268
-1083
-444
-1117
+262
+1278
+438
+1312
 PARAMETERS - SIMULATION\n
 14
 104.0
 1
 
 INPUTBOX
-269
-887
-352
-947
+263
+1082
+346
+1142
 providers-color
 15.0
 1
@@ -474,30 +488,30 @@ providers-color
 Color
 
 TEXTBOX
-269
-853
-442
-871
+263
+1048
+436
+1066
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-267
-633
-460
-671
+261
+828
+454
+866
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 INPUTBOX
-265
-672
-358
-732
+259
+867
+352
+927
 consumers-color
 105.0
 1
@@ -505,10 +519,10 @@ consumers-color
 Color
 
 SLIDER
-186
-748
-358
-781
+180
+943
+352
+976
 min-activity-level
 min-activity-level
 0
@@ -520,10 +534,10 @@ min-activity-level
 HORIZONTAL
 
 SLIDER
-361
-748
-536
-781
+355
+943
+530
+976
 max-activity-level
 max-activity-level
 0
@@ -535,10 +549,10 @@ max-activity-level
 HORIZONTAL
 
 INPUTBOX
-176
-1210
-295
-1270
+170
+1405
+289
+1465
 recency-scaling-factor
 7.21347520444
 1
@@ -546,10 +560,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-427
-472
-496
-532
+421
+667
+490
+727
 history-size
 10.0
 1
@@ -557,10 +571,10 @@ history-size
 Number
 
 INPUTBOX
-299
-1210
-390
-1270
+293
+1405
+384
+1465
 branching-factor
 2.0
 1
@@ -568,10 +582,10 @@ branching-factor
 Number
 
 INPUTBOX
-394
-1210
-549
-1270
+388
+1405
+543
+1465
 referral-length-threshold
 5.0
 1
@@ -579,10 +593,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-165
-1308
-286
-1368
+159
+1503
+280
+1563
 interaction-trust-coeff
 2.0
 1
@@ -590,10 +604,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-290
-1308
-412
-1368
+284
+1503
+406
+1563
 witness-reputation-coeff
 2.0
 1
@@ -601,10 +615,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-415
-1308
-544
-1368
+409
+1503
+538
+1563
 certified-reputation-coeff
 0.5
 1
@@ -612,10 +626,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-144
-1408
-279
-1468
+138
+1603
+273
+1663
 interaction-trust-reliability
 0.69314718056
 1
@@ -623,10 +637,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-280
-1408
-427
-1468
+274
+1603
+421
+1663
 witness-reputation-reliability
 0.69314718056
 1
@@ -634,10 +648,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-429
-1408
-579
-1468
+423
+1603
+573
+1663
 certified-reputation-reliability
 0.69314718056
 1
@@ -645,10 +659,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-361
-672
-455
-732
+355
+867
+449
+927
 consumers-shape
 person
 1
@@ -656,10 +670,10 @@ person
 String
 
 INPUTBOX
-356
-887
-441
-947
+350
+1082
+435
+1142
 providers-shape
 house
 1
@@ -667,20 +681,20 @@ house
 String
 
 TEXTBOX
-93
-812
-651
-830
+87
+1007
+645
+1025
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-87
-321
-649
-341
+81
+516
+643
+536
 ---------------------------------------------------------------------
 25
 104.0
@@ -697,10 +711,10 @@ TEXTBOX
 1
 
 TEXTBOX
-85
-596
-649
-617
+79
+791
+643
+812
 ---------------------------------------------------------------------
 25
 104.0
@@ -717,47 +731,32 @@ TEXTBOX
 1
 
 TEXTBOX
-96
-1049
-647
-1067
+90
+1244
+641
+1262
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 TEXTBOX
-92
-1476
-648
-1501
+86
+1671
+642
+1696
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 SLIDER
-145
-570
-341
-603
+139
+765
+335
+798
 min-radius-of-operation
 min-radius-of-operation
-0
-100
-10.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-366
-570
-567
-603
-max-radius-of-operation
-max-radius-of-operation
 0
 100
 15.0
@@ -766,11 +765,26 @@ max-radius-of-operation
 %
 HORIZONTAL
 
+SLIDER
+360
+765
+561
+798
+max-radius-of-operation
+max-radius-of-operation
+0
+100
+20.0
+1
+1
+%
+HORIZONTAL
+
 INPUTBOX
-82
-391
-215
-451
+76
+586
+209
+646
 number-of-good-providers
 10.0
 1
@@ -778,10 +792,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-221
-390
-369
-450
+215
+585
+363
+645
 number-of-ordinary-providers
 40.0
 1
@@ -789,10 +803,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-378
-391
-546
-451
+372
+586
+540
+646
 number-of-intermittent-providers
 5.0
 1
@@ -800,10 +814,10 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-549
-391
-677
-451
+543
+586
+671
+646
 number-of-bad-providers
 45.0
 1
@@ -811,20 +825,20 @@ number-of-bad-providers
 Number
 
 TEXTBOX
-86
-199
-655
-217
+80
+394
+649
+412
 ---------------------------------------------------------------------
 25
 104.0
 1
 
 PLOT
-276
-35
-476
-185
+31
+54
+257
+204
 UG Mean
 Interaction
 UG Mean
@@ -836,8 +850,135 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 0 -5298144 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\"]"
-"NoTrust" 1.0 0 -14439633 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"NoTrust\"]"
+"FIRE" 1.0 0 -2674135 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\"]"
+"NoTrust" 1.0 0 -13840069 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"NoTrust\"]"
+
+PLOT
+267
+53
+500
+203
+Provider's Utility
+Utility
+Units
+-10.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"good" 1.0 1 -13345367 true "" "histogram [utility-gain] of providers with [profile = \"good\"]"
+"ordinary" 1.0 1 -11221820 true "" "histogram [utility-gain] of providers with [profile = \"ordinary\"]"
+"bad" 1.0 1 -2064490 true "" "histogram [utility-gain] of providers with [profile = \"bad\"]"
+"intermittent" 1.0 1 -5825686 true "" "histogram [utility-gain] of providers with [profile = \"intermittent\"]"
+
+PLOT
+503
+52
+703
+202
+Consumer's Utility
+Utilty
+Units
+-10.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"FIRE" 1.0 1 -2674135 true "" "histogram [ug] of consumers with [trust-model = \"FIRE\"]"
+"NoTrust" 1.0 1 -13840069 true "" "histogram [ug] of consumers with [trust-model = \"NoTrust\"]"
+
+TEXTBOX
+344
+10
+399
+28
+STATS
+14
+104.0
+1
+
+MONITOR
+180
+224
+324
+269
+Total Interaction
+sum [interactions_counter] of consumers
+17
+1
+11
+
+MONITOR
+32
+276
+176
+321
+[FIRE] - Max Utility Gain 
+max [utility-gain / max (list 1 interactions_counter)] of (consumers with [trust-model = \"FIRE\"])
+17
+1
+11
+
+MONITOR
+32
+325
+176
+370
+[NoTrust] - Max Utility Gain 
+max [utility-gain / max (list 1 interactions_counter)] of (consumers with [trust-model = \"NoTrust\"])
+17
+1
+11
+
+MONITOR
+180
+276
+323
+321
+[FIRE] - Min Utility Gain 
+min [utility-gain / max (list 1 interactions_counter)] of (consumers with [trust-model = \"FIRE\"])
+17
+1
+11
+
+MONITOR
+180
+326
+323
+371
+[NoTrust] - Min Utility Gain 
+min [utility-gain / max (list 1 interactions_counter)] of (consumers with [trust-model = \"NoTrust\"])
+17
+1
+11
+
+MONITOR
+32
+223
+176
+268
+NIL
+current-round
+17
+1
+11
+
+MONITOR
+328
+224
+472
+269
+Total Failed Interactions
+sum [failed_interactions_counter] of consumers
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
