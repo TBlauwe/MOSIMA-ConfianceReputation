@@ -22,6 +22,8 @@ providers-own [
     profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
+    acquaintances           ;; Neighbours in range of operations
+    need-update?                 ;; Does it need to be need-update? ? (Just spawned or moved)
 ]
 
 consumers-own                   [
@@ -30,10 +32,11 @@ consumers-own                   [
     activity-level              ;; Probability to request a service, set randomly at spawn
     radius-of-operation         ;;
     ratings                     ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
-    selection-process           ;; Which method should be used to select a provider (random or trust model)
     trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
     interactions_counter        ;; Number of interaction
     failed_interactions_counter ;; Number of failed interaction (No providers found)
+    acquaintances               ;; Neighbours in range of operations
+    need-update?                     ;; Does it need to be need-update? ? (Just spawned or moved)
 ]
 
 ;; | ================================
@@ -78,6 +81,8 @@ to spawn-providers [number _profile _color]
         set shape providers-shape
         set profile _profile
         set ratings []
+        set acquaintances no-turtles
+        set need-update? true
         set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
         set size 0.025
         if (_profile = "good")[
@@ -104,6 +109,8 @@ to spawn-consumers [number _trust-model _color]
         set shape consumers-shape
         set size 0.025
         set ratings []
+        set acquaintances no-turtles
+        set need-update? true
         set trust-model _trust-model
         set utility-gain 0
         set ug 0
@@ -117,18 +124,31 @@ end
 ;; | ================================
 
 to interaction-round
-    ;; If a consumer needs a service, search for a provider
+
+    ;; ===== PROFILING START =====
     profiler:start
+    ;; ==========================
+
+    ask providers[
+        if(need-update?)[
+            update
+        ]
+    ]
+
     ask consumers[
+        if(need-update?)[
+            update
+        ]
+
         if(need-service?)[
 
             ;; Find relevant providers
-            let providers-list (find-providers (list who) (referral-length-threshold))
+            let providers-set (find-providers (turtle-set self) (referral-length-threshold))
 
-            ifelse(length providers-list > 0)[
+            ifelse(count providers-set > 0)[
 
                 ;; Choose one according to the selection process
-                let choosen-provider (select-provider providers-list)
+                let choosen-provider ([who] of (select-provider providers-set))
 
                 ;; Interact
                 use-service choosen-provider
@@ -144,9 +164,12 @@ to interaction-round
             ]
         ]
     ]
+
+    ;; ===== PROFILING STOP =====
     profiler:stop
     print profiler:report
     profiler:reset
+    ;; ==========================
 
 end
 
@@ -192,34 +215,44 @@ end
 
 ;; Returns a list of providers in radius of operation
 ;; If none is relevant, ask acquaintance to find one (recursive)
-to-report find-providers [excluded-agents length-threshold]
+to-report find-providers [excluded_agents length_threshold]
+    if(count acquaintances > 0) [
+        ;; First - Is there any providers nearby ?
+        let _providers (acquaintances with [ breed = providers ])
 
-    set excluded-agents (lput who excluded-agents)
+        ;; Even if we already have providers, let's get others nearby
+        if (length_threshold > 0)[
 
-    ;; First - Is there any providers nearby ?
-    let _providers ([who] of (providers in-radius radius-of-operation))
+            let _acquaintances (acquaintances with [ (not member? self excluded_agents) and (breed = consumers) ])
 
-    ;; Even if we already have providers, let's get others nearby
-    if (length-threshold > 0)[
+            set excluded_agents (turtle-set self excluded_agents _acquaintances)
 
-        let acquaintances ([who] of ((other consumers in-radius radius-of-operation) with [not member? who excluded-agents]))
-
-        foreach acquaintances [ _acquaintance ->
-            set excluded-agents (lput _acquaintance excluded-agents)
-        ]
-
-        foreach acquaintances [ _acquaintance ->
-            let _acquaintance_providers ([find-providers (excluded-agents) (length-threshold - 1)] of consumer _acquaintance)
-
-            foreach _acquaintance_providers [ _provider ->
-                if (not member? _provider _providers)[
-                    set _providers (lput _provider _providers)
-                ]
+            ask _acquaintances[
+                set _providers (turtle-set 
+                    _providers 
+                    find-providers (excluded_agents) (length_threshold - 1))
             ]
         ]
+        report _providers
     ]
+    report no-turtles
+end
 
-    report _providers
+
+;; Returns the selected provider based on the trust model. See 137-138p.
+to-report FIRE-providers-selection [providers-set]
+    report one-of providers-set
+
+    ;; ===== STEP I =====
+    ;; Compute trustworthiness of each provides
+    ;; if computable
+    ;;    add to HasTrustValue
+    ;; else
+    ;;    add to NoTrustValue
+
+    ;; ===== STEP II =====
+    ;; If one is empty, choose the other
+    ;; else, exploitation-exploration problematic
 end
 
 
@@ -266,29 +299,12 @@ end
 ;; Returns the selected provider by the process. The selection process relies on the agent's trust model to decide
 ;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
 ;; select a provider from the list.
-to-report select-provider [providers-list]
-    ifelse (selection-process != "random") [
-        report select-provider-trust-model providers-list
+to-report select-provider [providers-set]
+    ifelse (trust-model != "random") [
+        report FIRE-providers-selection providers-set
     ][
-        report one-of providers-list
+        report one-of providers-set
     ]
-end
-
-
-;; Returns the selected provider based on the trust model. See 137-138p.
-to-report select-provider-trust-model [providers-list]
-    report one-of providers-list
-
-    ;; ===== STEP I =====
-    ;; Compute trustworthiness of each provides
-    ;; if computable
-    ;;    add to HasTrustValue
-    ;; else
-    ;;    add to NoTrustValue
-
-    ;; ===== STEP II =====
-    ;; If one is empty, choose the other
-    ;; else, exploitation-exploration problematic
 end
 
 
@@ -300,12 +316,21 @@ to sent-rating [agent rating]
     ]
 end
 
+;; Acquaintances is an AgentSet 
+to set-acquaintances 
+    set acquaintances (other turtles in-radius radius-of-operation)
+end
+
+to update
+    set-acquaintances
+    set need-update? false
+end
 
 ;; Returns an utility gain based on provider's service quality
-to use-service [_provider]
-    set ug ([utility-gain] of provider _provider)
-    set interactions_counter (interactions_counter + 1)
-    set utility-gain (utility-gain + ug)
+to use-service [choosen_provider]
+    set ug [utility-gain] of provider choosen_provider
+    set interactions_counter interactions_counter + 1
+    set utility-gain utility-gain + ug
 end
 
 
