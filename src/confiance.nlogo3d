@@ -125,7 +125,8 @@ to interaction-round
                 let ug use-service choosen-provider
 
                 ;; Rate
-                let rating (rate choosen-provider current-round)
+                let rating (new-rating (who) (choosen-provider) (current-round) (ug))
+                add-rating (choosen-provider) (rating)
 
                 ;; Inform provider of his rating
                 sent-rating choosen-provider rating
@@ -241,7 +242,7 @@ end
 ;; rate a provider and return the rating
 to-report rate [other-agent interaction]
     let value 0
-    let rating (new-rating self other-agent interaction value)
+    let rating (new-rating who other-agent interaction value)
     add-rating other-agent rating
     report rating
 end
@@ -278,8 +279,9 @@ end
 
 ;; Inform the agent of his rating
 to sent-rating [agent rating]
+    let consumer_number who
     ask provider agent [
-        add-rating agent rating
+        add-rating consumer_number rating
     ]
 end
 
