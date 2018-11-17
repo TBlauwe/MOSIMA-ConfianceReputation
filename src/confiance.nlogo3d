@@ -167,7 +167,7 @@ to interaction-round
         ]
 
         ;; ===== Tick Update =====
-        set temperature (temperature - 1)
+        set temperature ifelse-value(temperature = 1) [temperature] [temperature - 1]
     ]
 
     ;; ===== PROFILING STOP =====
@@ -187,6 +187,96 @@ end
 ;; | ========== FORMULAS ==========
 ;; | ==============================
 
+to-report compute-trust-value [agent]
+    report trust-value-it agent
+end
+
+;; ========== IT ==========
+
+;; Return the following list (value, reliability) if computable
+to-report trust-value-it [agent]
+    let _ratings (find-agent-ratings agent)
+
+    ifelse(length _ratings > 0)[
+        let numerateur 0
+        let denominateur 0
+        let _trust-value 0
+        let deviation-reliability 0
+
+        ifelse(length _ratings > 1)[
+            set numerateur reduce [ [current-value rating] ->
+                    current-value + ((pr-it (current-round - (item 2 rating)) (item 3 rating)) * (item 3 rating))
+                ] _ratings
+
+            set denominateur reduce [ [current-value rating] ->
+                    current-value + (pr-it (current-round - (item 2 rating)) (item 3 rating))
+                ] _ratings
+
+            set _trust-value (numerateur / denominateur)
+
+            set deviation-reliability reduce [ [current-value rating] ->
+                    current-value + (pr-it (current-round - (item 2 rating)) (item 3 rating)) * abs((item 3 rating) - _trust-value)
+                ] _ratings
+        ][
+            let rating item 0 _ratings
+
+            set numerateur ((pr-it (current-round - (item 2 rating)) (item 3 rating)) * (item 3 rating))
+            set denominateur (pr-it (current-round - (item 2 rating)) (item 3 rating))
+
+            set _trust-value (numerateur / denominateur)
+
+            set deviation-reliability (pr-it (current-round - (item 2 rating)) (item 3 rating)) * abs((item 3 rating) - _trust-value)
+        ]
+
+        report (list (_trust-value) ((1 - exp ( - interaction-trust-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+    ][
+        report []
+    ]
+end
+
+
+;; IT Rating reliability
+to-report pr-it [delta rating-value]
+    report exp ( (- delta * rating-value) / recency-scaling-factor )
+end
+
+
+;; ========== CR ==========
+to-report trust-value-cr [agentA agentB]
+    report 0
+end
+
+
+;; CR Rating reliability
+to-report pr-cr [agentA agentB]
+    report 0
+end
+
+
+;; CR Deviation reliability
+to-report pd-cr [agentA agentB]
+    report 0
+end
+
+
+;; ========== WR ==========
+to-report trust-value-wr [agentA agentB]
+    report 0
+end
+
+;; WR Rating reliability
+to-report pr-wr [agentA agentB]
+    report 0
+end
+
+
+;; WR Deviation reliability
+to-report pd-wr [agentA agentB]
+    report 0
+end
+
+
+;; ========== Other ==========
 
 ;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
 to-report service-quality-degradation [_consumer _provider value]
@@ -212,7 +302,6 @@ to add-rating [agent rating]
         set ratings replace-item index ratings (list agent agent-ratings)
     ]
 end
-
 
 ;; Returns specified agent's ratings
 to-report find-agent-ratings [agent]
@@ -253,7 +342,6 @@ end
 
 ;; Returns the selected provider based on the trust model. See 137-138p.
 to-report FIRE-providers-selection [providers-set]
-    report one-of providers-set
 
     let hasTrustValue_value []
     let hasTrustValue_agent []
@@ -266,6 +354,15 @@ to-report FIRE-providers-selection [providers-set]
     ;;    add to HasTrustValue
     ;; else
     ;;    add to NoTrustValue
+    foreach (sort providers-set) [ _provider ->
+        let value (compute-trust-value [who] of _provider)
+        ifelse (empty? value)[
+            set noTrustValue_agent (fput _provider noTrustValue_agent)
+        ][
+            set hasTrustValue_value fput (item 0 value) hasTrustValue_value
+            set hasTrustValue_agent (fput _provider hasTrustValue_agent)
+        ]
+    ]
 
     ;; ===== STEP II =====
     ;; If one is empty, choose the other
@@ -279,18 +376,18 @@ to-report FIRE-providers-selection [providers-set]
     ][
 
         let expected_exploration_return ([utility-gain] of (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent))
-        let expected_exploitation_return (mean [utility-gain] of providers-set) 
+        let expected_exploitation_return (mean [utility-gain] of providers-set)
 
         let normalization-term ( exp ((expected_exploitation_return) / temperature) + exp ((expected_exploration_return) / temperature))
 
         let pExploration exp ((expected_exploration_return) / temperature ) / normalization-term
         let pExploitation exp ((expected_exploitation_return) / temperature) / normalization-term ;; Can not be used
 
-        ifelse (coin-flip(pExploration))[ 
+        ifelse (coin-flip(pExploration))[
             ;; Exploration
             report one-of noTrustValue_agent
         ][
-            ;; Exploitation 
+            ;; Exploitation
             report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
         ]
     ]
@@ -341,11 +438,11 @@ end
 ;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
 ;; select a provider from the list.
 to-report select-provider [providers-set]
-    ifelse (trust-model != "random") [
+    if(trust-model = "FIRE") [
         report FIRE-providers-selection providers-set
-    ][
-        report one-of providers-set
     ]
+
+    report one-of providers-set
 end
 
 
@@ -461,10 +558,10 @@ ticks
 30.0
 
 BUTTON
-298
-469
-361
-502
+308
+450
+371
+483
 NIL
 setup
 NIL
@@ -478,10 +575,10 @@ NIL
 1
 
 BUTTON
-369
-469
-432
-502
+379
+450
+442
+483
 NIL
 go\n
 T
@@ -495,41 +592,41 @@ NIL
 1
 
 TEXTBOX
-340
-427
-400
-445
+346
+403
+406
+421
 ACTIONS
 14
 104.0
 1
 
 TEXTBOX
-299
-553
-449
-571
+304
+548
+454
+566
 PARAMETERS - AGENTS\n
 14
 104.0
 1
 
 INPUTBOX
-295
-1316
-394
-1376
+511
+455
+610
+515
 number-of-rounds
-500.0
+200.0
 1
 0
 Number
 
 INPUTBOX
-77
-665
-195
-725
+577
+581
+693
+641
 number-of-consumers
 500.0
 1
@@ -537,62 +634,40 @@ number-of-consumers
 Number
 
 TEXTBOX
-262
-1278
+312
+963
 438
-1312
-PARAMETERS - SIMULATION\n
+988
+PARAMETERS - FIRE\n\n
 14
 104.0
 1
 
-INPUTBOX
-263
-1082
-346
-1142
-providers-color
-15.0
-1
-0
-Color
-
 TEXTBOX
-263
-1048
-436
-1066
+425
+751
+598
+769
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-261
-828
-454
-866
+85
+749
+278
+787
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
-INPUTBOX
-259
-867
-352
-927
-consumers-color
-105.0
-1
-0
-Color
-
 SLIDER
-180
-943
-352
-976
+79
+846
+282
+879
 min-activity-level
 min-activity-level
 0
@@ -600,14 +675,14 @@ min-activity-level
 0.25
 0.01
 1
-%
+chance
 HORIZONTAL
 
 SLIDER
-355
-943
-530
-976
+79
+882
+281
+915
 max-activity-level
 max-activity-level
 0
@@ -615,14 +690,14 @@ max-activity-level
 1.0
 0.01
 1
-%
+chance
 HORIZONTAL
 
 INPUTBOX
-170
-1405
-289
-1465
+175
+995
+302
+1055
 recency-scaling-factor
 7.21347520444
 1
@@ -630,10 +705,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-421
-667
-490
-727
+578
+644
+693
+704
 history-size
 10.0
 1
@@ -641,10 +716,10 @@ history-size
 Number
 
 INPUTBOX
-293
-1405
-384
-1465
+175
+1058
+302
+1118
 branching-factor
 2.0
 1
@@ -652,10 +727,10 @@ branching-factor
 Number
 
 INPUTBOX
-388
-1405
-543
-1465
+175
+1120
+302
+1180
 referral-length-threshold
 5.0
 1
@@ -663,10 +738,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-159
-1503
-280
-1563
+306
+995
+435
+1055
 interaction-trust-coeff
 2.0
 1
@@ -674,10 +749,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-284
-1503
-406
-1563
+306
+1058
+435
+1118
 witness-reputation-coeff
 2.0
 1
@@ -685,10 +760,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-409
-1503
-538
-1563
+306
+1120
+435
+1180
 certified-reputation-coeff
 0.5
 1
@@ -696,10 +771,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-138
-1603
-273
-1663
+439
+995
+587
+1055
 interaction-trust-reliability
 0.69314718056
 1
@@ -707,10 +782,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-274
-1603
-421
-1663
+439
+1058
+587
+1118
 witness-reputation-reliability
 0.69314718056
 1
@@ -718,10 +793,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-423
-1603
-573
-1663
+439
+1120
+587
+1180
 certified-reputation-reliability
 0.69314718056
 1
@@ -729,10 +804,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-355
-867
-449
-927
+188
+782
+282
+842
 consumers-shape
 person
 1
@@ -740,10 +815,10 @@ person
 String
 
 INPUTBOX
-350
-1082
-435
-1142
+373
+778
+458
+838
 providers-shape
 house
 1
@@ -751,10 +826,10 @@ house
 String
 
 TEXTBOX
-87
-1007
-645
-1025
+90
+930
+648
+948
 ---------------------------------------------------------------------
 25
 104.0
@@ -781,10 +856,10 @@ TEXTBOX
 1
 
 TEXTBOX
-79
-791
-643
-812
+84
+719
+648
+740
 ---------------------------------------------------------------------
 25
 104.0
@@ -801,10 +876,10 @@ TEXTBOX
 1
 
 TEXTBOX
-90
-1244
-641
-1262
+102
+1181
+653
+1199
 ---------------------------------------------------------------------
 25
 104.0
@@ -821,25 +896,25 @@ TEXTBOX
 1
 
 SLIDER
-139
-765
-335
-798
+378
+581
+574
+614
 min-radius-of-operation
 min-radius-of-operation
 0
 100
-15.0
+13.0
 1
 1
 %
 HORIZONTAL
 
 SLIDER
-360
-765
-561
-798
+378
+616
+574
+649
 max-radius-of-operation
 max-radius-of-operation
 0
@@ -851,10 +926,10 @@ max-radius-of-operation
 HORIZONTAL
 
 INPUTBOX
-76
-586
-209
-646
+37
+581
+204
+641
 number-of-good-providers
 10.0
 1
@@ -862,10 +937,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-215
-585
-363
-645
+37
+644
+204
+704
 number-of-ordinary-providers
 40.0
 1
@@ -873,10 +948,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-372
-586
-540
-646
+207
+581
+374
+641
 number-of-intermittent-providers
 5.0
 1
@@ -884,10 +959,10 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-543
-586
-671
-646
+207
+643
+374
+703
 number-of-bad-providers
 45.0
 1
@@ -895,10 +970,10 @@ number-of-bad-providers
 Number
 
 TEXTBOX
-80
-394
-649
-412
+78
+378
+647
+396
 ---------------------------------------------------------------------
 25
 104.0
@@ -1051,10 +1126,10 @@ sum [failed_interactions_counter] of consumers
 11
 
 INPUTBOX
-42
-1186
-214
-1246
+466
+778
+638
+838
 service-quality-degradation-alpha
 1.0
 1
@@ -1062,25 +1137,59 @@ service-quality-degradation-alpha
 Number
 
 INPUTBOX
-78
-867
-180
-927
+79
+782
+181
+842
 initial-temperature
 100.0
 1
 0
 Number
 
-TEXTBOX
-90
-931
-163
-966
-H: -1 à chaque tick de l'agent\n
-11
-0.0
+SWITCH
+136
+411
+239
+444
+Use-IT?
+Use-IT?
+0
 1
+-1000
+
+SWITCH
+136
+481
+239
+514
+Use-WR?
+Use-WR?
+1
+1
+-1000
+
+SWITCH
+136
+446
+239
+479
+Use-CR?
+Use-CR?
+1
+1
+-1000
+
+SWITCH
+497
+415
+630
+448
+Use-Dynamic?
+Use-Dynamic?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
