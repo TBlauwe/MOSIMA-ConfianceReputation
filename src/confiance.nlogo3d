@@ -23,7 +23,7 @@ providers-own [
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
     acquaintances           ;; Neighbours in range of operations
-    need-update?                 ;; Does it need to be need-update? ? (Just spawned or moved)
+    need-update?            ;; Does it need to be need-update? ? (Just spawned or moved)
 ]
 
 consumers-own                   [
@@ -36,7 +36,8 @@ consumers-own                   [
     interactions_counter        ;; Number of interaction
     failed_interactions_counter ;; Number of failed interaction (No providers found)
     acquaintances               ;; Neighbours in range of operations
-    need-update?                     ;; Does it need to be need-update? ? (Just spawned or moved)
+    need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
+    temperature                 ;; Exploitation-Exploration dilemma
 ]
 
 ;; | ================================
@@ -70,7 +71,7 @@ end
 
 to set-globals
     ;;set radius (world-width - 1) / 2
-    set radius 0.5 
+    set radius 0.5
     set current-round 0
 end
 
@@ -115,6 +116,7 @@ to spawn-consumers [number _trust-model _color]
         set utility-gain 0
         set ug 0
         set interactions_counter 0
+        set temperature initial-temperature
   ]
 end
 
@@ -163,6 +165,9 @@ to interaction-round
                 set failed_interactions_counter (failed_interactions_counter + 1)
             ]
         ]
+
+        ;; ===== Tick Update =====
+        set temperature (temperature - 1)
     ]
 
     ;; ===== PROFILING STOP =====
@@ -182,6 +187,13 @@ end
 ;; | ========== FORMULAS ==========
 ;; | ==============================
 
+
+;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
+to-report service-quality-degradation [_consumer _provider value]
+    let _distance ([distance _provider] of _consumer)
+    let degradation (normalized (0) (radius * 2) (- service-quality-degradation-alpha * _distance + radius * 2))
+    report ifelse-value(  _distance > [radius-of-operation] of _provider) [value - abs (value * degradation)] [value]
+end
 
 
 ;; | ===================================
@@ -228,8 +240,8 @@ to-report find-providers [excluded_agents length_threshold]
             set excluded_agents (turtle-set self excluded_agents _acquaintances)
 
             ask _acquaintances[
-                set _providers (turtle-set 
-                    _providers 
+                set _providers (turtle-set
+                    _providers
                     find-providers (excluded_agents) (length_threshold - 1))
             ]
         ]
@@ -243,8 +255,13 @@ end
 to-report FIRE-providers-selection [providers-set]
     report one-of providers-set
 
+    let hasTrustValue_value []
+    let hasTrustValue_agent []
+
+    let noTrustValue_agent []
+
     ;; ===== STEP I =====
-    ;; Compute trustworthiness of each provides
+    ;; Compute trustworthiness of each providers
     ;; if computable
     ;;    add to HasTrustValue
     ;; else
@@ -252,7 +269,31 @@ to-report FIRE-providers-selection [providers-set]
 
     ;; ===== STEP II =====
     ;; If one is empty, choose the other
-    ;; else, exploitation-exploration problematic
+    ;; else, exploitation-exploration dilemma
+    ifelse(empty? noTrustValue_agent or empty? hasTrustValue_agent)[
+        ifelse(empty? noTrustValue_agent)[
+            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+        ][
+            report one-of noTrustValue_agent
+        ]
+    ][
+
+        let expected_exploration_return ([utility-gain] of (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent))
+        let expected_exploitation_return (mean [utility-gain] of providers-set) 
+
+        let normalization-term ( exp ((expected_exploitation_return) / temperature) + exp ((expected_exploration_return) / temperature))
+
+        let pExploration exp ((expected_exploration_return) / temperature ) / normalization-term
+        let pExploitation exp ((expected_exploitation_return) / temperature) / normalization-term ;; Can not be used
+
+        ifelse (coin-flip(pExploration))[ 
+            ;; Exploration
+            report one-of noTrustValue_agent
+        ][
+            ;; Exploitation 
+            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+        ]
+    ]
 end
 
 
@@ -316,8 +357,8 @@ to sent-rating [agent rating]
     ]
 end
 
-;; Acquaintances is an AgentSet 
-to set-acquaintances 
+;; Acquaintances is an AgentSet
+to set-acquaintances
     set acquaintances (other turtles in-radius radius-of-operation)
 end
 
@@ -380,6 +421,10 @@ end
 
 to-report coin-flip [probability]
     report (random-float 1) <= probability
+end
+
+to-report normalized [_min _max x]
+    report (x - _min) / (_max - _min)
 end
 
 ;; | ===============================
@@ -1004,6 +1049,38 @@ sum [failed_interactions_counter] of consumers
 17
 1
 11
+
+INPUTBOX
+42
+1186
+214
+1246
+service-quality-degradation-alpha
+1.0
+1
+0
+Number
+
+INPUTBOX
+78
+867
+180
+927
+initial-temperature
+100.0
+1
+0
+Number
+
+TEXTBOX
+90
+931
+163
+966
+H: -1 à chaque tick de l'agent\n
+11
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
