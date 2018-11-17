@@ -71,7 +71,7 @@ end
 
 to set-globals
     ;;set radius (world-width - 1) / 2
-    set radius 0.5
+    set radius 1
     set current-round 0
 end
 
@@ -531,8 +531,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-47
-48
+73
+74
 -1
 -1
 13.0
@@ -545,12 +545,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--1
-1
--1
-1
--1
-1
+-2
+2
+-2
+2
+-2
+2
 1
 0
 1
