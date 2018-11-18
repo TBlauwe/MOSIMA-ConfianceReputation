@@ -22,6 +22,7 @@ providers-own [
     profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
+    certificates            ;; Ratings to be shown as certificates
     acquaintances           ;; Neighbours in range of operations
     need-update?            ;; Does it need to be need-update? ? (Just spawned or moved)
 ]
@@ -32,6 +33,7 @@ consumers-own                   [
     activity-level              ;; Probability to request a service, set randomly at spawn
     radius-of-operation         ;;
     ratings                     ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
+    certificates                ;; Ratings to be shown as certificates
     trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
     interactions_counter        ;; Number of interaction
     failed_interactions_counter ;; Number of failed interaction (No providers found)
@@ -82,6 +84,7 @@ to spawn-providers [number _profile _color]
         set shape providers-shape
         set profile _profile
         set ratings []
+        set certificates []
         set acquaintances no-turtles
         set need-update? true
         set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
@@ -110,6 +113,7 @@ to spawn-consumers [number _trust-model _color]
         set shape consumers-shape
         set size 0.025
         set ratings []
+        set certificates []
         set acquaintances no-turtles
         set need-update? true
         set trust-model _trust-model
@@ -280,20 +284,46 @@ end
 
 
 ;; ========== CR ==========
+;; Same as IT except for the ratings collected
 to-report trust-value-cr [agent]
+    let _ratings [certificates] of provider agent 
+
+    ifelse(length _ratings > 0)[
+        let numerateur 0
+        let denominateur 0
+        let _trust-value 0
+        let deviation-reliability 0
+
+        ifelse(length _ratings > 1)[
+            set numerateur reduce [ [current-value rating] ->
+                    current-value + ((pr-it (current-round - (item 2 rating)) (item 3 rating)) * (item 3 rating))
+                ] _ratings
+
+            set denominateur reduce [ [current-value rating] ->
+                    current-value + (pr-it (current-round - (item 2 rating)) (item 3 rating))
+                ] _ratings
+
+            set _trust-value (numerateur / denominateur)
+
+            set deviation-reliability reduce [ [current-value rating] ->
+                    current-value + (pr-it (current-round - (item 2 rating)) (item 3 rating)) * abs((item 3 rating) - _trust-value)
+                ] _ratings
+        ][
+            let rating item 0 _ratings
+
+            set numerateur ((pr-it (current-round - (item 2 rating)) (item 3 rating)) * (item 3 rating))
+            set denominateur (pr-it (current-round - (item 2 rating)) (item 3 rating))
+
+            set _trust-value (numerateur / denominateur)
+
+            set deviation-reliability (pr-it (current-round - (item 2 rating)) (item 3 rating)) * abs((item 3 rating) - _trust-value)
+        ]
+
+        report (list (_trust-value) ((1 - exp ( - interaction-trust-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+    ][
+        report []
+    ]
     report [] 
-end
-
-
-;; CR Rating reliability
-to-report pr-cr [agentA agentB]
-    report 0
-end
-
-
-;; CR Deviation reliability
-to-report pd-cr [agentA agentB]
-    report 0
 end
 
 
@@ -339,6 +369,9 @@ to add-rating [agent rating]
         set agent-ratings (sublist (fput rating agent-ratings) 0 (min (list history-size (length agent-ratings))))
         set ratings replace-item index ratings (list agent agent-ratings)
     ]
+
+    ;; Ajout aux certificats
+    set certificates (sublist (fput rating certificates) 0 (min (list history-size (length certificates))))
 end
 
 ;; Returns specified agent's ratings
