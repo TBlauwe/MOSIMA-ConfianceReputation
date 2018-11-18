@@ -188,7 +188,45 @@ end
 ;; | ==============================
 
 to-report compute-trust-value [agent]
-    report trust-value-it agent
+    let trust-values []
+    let wK []
+    let coeffs []
+
+    if(Use-IT?) [
+        let value trust-value-it agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (interaction-trust-coeff * (item 1 value)) wK)
+            set coeffs (fput interaction-trust-coeff coeffs)
+        ]
+    ]
+
+    if(Use-CR?) [ 
+        let value trust-value-cr agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (certified-reputation-coeff * (item 1 value)) wK)
+            set coeffs (fput certified-reputation-coeff coeffs)
+        ]
+    ]
+
+    if(Use-WR?) [ 
+        let value trust-value-wr agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (witness-reputation-coeff * (item 1 value)) wK)
+            set coeffs (fput witness-reputation-coeff coeffs)
+        ]
+    ]
+
+    if(not empty? trust-values and not empty? wK)[
+        let trust-value ( (sum (map * wK trust-values)) / (sum coeffs) )
+        let reliability ( (sum wK) / (sum coeffs) ) 
+
+        report (list trust-value reliability)
+    ]
+
+    report []
 end
 
 ;; ========== IT ==========
@@ -242,8 +280,8 @@ end
 
 
 ;; ========== CR ==========
-to-report trust-value-cr [agentA agentB]
-    report 0
+to-report trust-value-cr [agent]
+    report [] 
 end
 
 
@@ -260,8 +298,8 @@ end
 
 
 ;; ========== WR ==========
-to-report trust-value-wr [agentA agentB]
-    report 0
+to-report trust-value-wr [agent]
+    report [] 
 end
 
 ;; WR Rating reliability
