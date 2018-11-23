@@ -18,28 +18,44 @@ breed [consumers consumer]
 ;; | ========== CLASS VARIABLES ==========
 ;; | =====================================
 providers-own [
-    utility-gain            ;;
+    utility-gain-mu         ;;
+    utility-gain-sigma      ;;
+    utility-gain-min        ;;
+    utility-gain-max        ;;
+    utility-gain            ;; for logging
+
     profile                 ;; Good or Intermittent or Bad - Used to determine performance level
     radius-of-operation     ;;
     ratings                 ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
     certificates            ;; Ratings to be shown as certificates
+
     acquaintances           ;; Neighbours in range of operations
+
     need-update?            ;; Does it need to be need-update? ? (Just spawned or moved)
 ]
 
 consumers-own                   [
     utility-gain                ;;
     ug                          ;; cache - last utility gained
+
     activity-level              ;; Probability to request a service, set randomly at spawn
     radius-of-operation         ;;
     ratings                     ;; List of ratings per agent's id in decreasing order(0 = AgentA, 1 = AgentB, 2 = Interaction, 3 = Value)
     certificates                ;; Ratings to be shown as certificates
     trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
+    temperature                 ;; Exploitation-Exploration dilemma
+
     interactions_counter        ;; Number of interaction
     failed_interactions_counter ;; Number of failed interaction (No providers found)
+
     acquaintances               ;; Neighbours in range of operations
+    providers-set               ;; Neighbours in range of operations
+
     need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
-    temperature                 ;; Exploitation-Exploration dilemma
+
+    use-it?                     ;; Explicit
+    use-cr?                     ;; Explicit
+    use-wr?                     ;; Explicit
 ]
 
 ;; | ================================
@@ -53,8 +69,27 @@ to setup
   spawn-providers number-of-ordinary-providers "ordinary" 85
   spawn-providers number-of-intermittent-providers "intermittent" 125
   spawn-providers number-of-bad-providers "bad" 135
-  spawn-consumers number-of-consumers "NoTrust" 65
-  spawn-consumers number-of-consumers "FIRE" 15
+
+  if (NoTrust-Group?)[
+    spawn-consumers number-of-consumers "NoTrust" 65 false false false
+  ]
+
+  if (IT-Group?)[
+    spawn-consumers number-of-consumers "FIRE" 15 true false false
+  ]
+
+  if (IT-CR-Group?)[
+    spawn-consumers number-of-consumers "FIRE" 15 true true false
+  ]
+
+  if (IT-WR-Group?)[
+    spawn-consumers number-of-consumers "FIRE" 15 true false true
+  ]
+
+  if (FIRE-Group?)[
+    spawn-consumers number-of-consumers "FIRE" 15 true true true
+  ]
+
   reset-ticks
 end
 
@@ -89,22 +124,35 @@ to spawn-providers [number _profile _color]
         set need-update? true
         set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
         set size 0.025
+        set utility-gain 0
         if (_profile = "good")[
-            set utility-gain random-normal 7.5 1.0
+            set utility-gain-mu random-float-range 5 10
+            set utility-gain-sigma 1.0
+            set utility-gain-min 5
+            set utility-gain-max 10
         ]
         if (_profile = "ordinary")[
-            set utility-gain random-normal 2.5 2.0
+            set utility-gain-mu random-float-range 0 5
+            set utility-gain-sigma 1.0
+            set utility-gain-min 0
+            set utility-gain-max 5
         ]
         if (_profile = "bad")[
-            set utility-gain random-normal -7.5 2.0
+            set utility-gain-mu random-float-range -10 0
+            set utility-gain-sigma 2.0
+            set utility-gain-min -10
+            set utility-gain-max 0
         ]
         if (_profile = "intermittent")[
-            set utility-gain random-float-range -5 5
+            set utility-gain-mu 0 ;;not used
+            set utility-gain-sigma 0 ;;not used
+            set utility-gain-min -5
+            set utility-gain-max 5
         ]
   ]
 end
 
-to spawn-consumers [number _trust-model _color]
+to spawn-consumers [number _trust-model _color _use-it? _use-cr? _use-wr?]
     create-consumers number [
         set-xyz-inside-sphere ;; Distribute turtles uniformely inside a sphere
         set color (shaded-color _color)
@@ -115,12 +163,16 @@ to spawn-consumers [number _trust-model _color]
         set ratings []
         set certificates []
         set acquaintances no-turtles
+        set providers-set no-turtles
         set need-update? true
         set trust-model _trust-model
         set utility-gain 0
         set ug 0
         set interactions_counter 0
         set temperature initial-temperature
+        set use-it? _use-it?
+        set use-cr? _use-cr?
+        set use-wr? _use-wr?
   ]
 end
 
@@ -137,24 +189,23 @@ to interaction-round
 
     ask providers[
         if(need-update?)[
-            update
+            update-provider
         ]
     ]
 
     ask consumers[
         if(need-update?)[
-            update
+            update-consumer
         ]
 
         if(need-service?)[
 
-            ;; Find relevant providers
-            let providers-set (find-providers (turtle-set self) (referral-length-threshold))
+            ;; providers-set is computed only when needed (When the consumer need an update)
 
             ifelse(count providers-set > 0)[
 
                 ;; Choose one according to the selection process
-                let choosen-provider ([who] of (select-provider providers-set))
+                let choosen-provider ([who] of select-provider)
 
                 ;; Interact
                 use-service choosen-provider
@@ -196,7 +247,7 @@ to-report compute-trust-value [agent]
     let wK []
     let coeffs []
 
-    if(Use-IT?) [
+    if(use-it?) [
         let value trust-value-it agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
@@ -205,7 +256,7 @@ to-report compute-trust-value [agent]
         ]
     ]
 
-    if(Use-CR?) [ 
+    if(use-cr?) [
         let value trust-value-cr agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
@@ -214,7 +265,7 @@ to-report compute-trust-value [agent]
         ]
     ]
 
-    if(Use-WR?) [ 
+    if(use-wr?) [
         let value trust-value-wr agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
@@ -225,7 +276,7 @@ to-report compute-trust-value [agent]
 
     if(not empty? trust-values and not empty? wK)[
         let trust-value ( (sum (map * wK trust-values)) / (sum coeffs) )
-        let reliability ( (sum wK) / (sum coeffs) ) 
+        let reliability ( (sum wK) / (sum coeffs) )
 
         report (list trust-value reliability)
     ]
@@ -286,7 +337,7 @@ end
 ;; ========== CR ==========
 ;; Same as IT except for the ratings collected
 to-report trust-value-cr [agent]
-    let _ratings [certificates] of provider agent 
+    let _ratings [certificates] of provider agent
 
     ifelse(length _ratings > 0)[
         let numerateur 0
@@ -323,13 +374,13 @@ to-report trust-value-cr [agent]
     ][
         report []
     ]
-    report [] 
+    report []
 end
 
 
 ;; ========== WR ==========
 to-report trust-value-wr [agent]
-    report [] 
+    report []
 end
 
 ;; WR Rating reliability
@@ -349,8 +400,8 @@ end
 ;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
 to-report service-quality-degradation [_consumer _provider value]
     let _distance ([distance _provider] of _consumer)
-    let degradation (normalized (0) (radius * 2) (- service-quality-degradation-alpha * _distance + radius * 2))
-    report ifelse-value(  _distance > [radius-of-operation] of _provider) [value - abs (value * degradation)] [value]
+    let degradation (- service-quality-degradation-alpha * (_distance - [radius-of-operation] of _provider) + 1)
+    report ifelse-value(  _distance > [radius-of-operation] of _provider) [value * degradation] [value]
 end
 
 
@@ -412,7 +463,7 @@ end
 
 
 ;; Returns the selected provider based on the trust model. See 137-138p.
-to-report FIRE-providers-selection [providers-set]
+to-report FIRE-providers-selection
 
     let hasTrustValue_value []
     let hasTrustValue_agent []
@@ -508,9 +559,9 @@ end
 ;; Returns the selected provider by the process. The selection process relies on the agent's trust model to decide
 ;; which provider is likely to be the most reliable. Consumers agents without a trust model randomly
 ;; select a provider from the list.
-to-report select-provider [providers-set]
+to-report select-provider
     if(trust-model = "FIRE") [
-        report FIRE-providers-selection providers-set
+        report FIRE-providers-selection
     ]
 
     report one-of providers-set
@@ -525,19 +576,23 @@ to sent-rating [agent rating]
     ]
 end
 
-;; Acquaintances is an AgentSet
-to set-acquaintances
+to update
     set acquaintances (other turtles in-radius radius-of-operation)
+    set need-update? false
 end
 
-to update
-    set-acquaintances
-    set need-update? false
+to update-consumer
+    update
+    set providers-set (find-providers (turtle-set self) (referral-length-threshold))
+end
+
+to update-provider
+    update
 end
 
 ;; Returns an utility gain based on provider's service quality
 to use-service [choosen_provider]
-    set ug [utility-gain] of provider choosen_provider
+    set ug [random-utility] of provider choosen_provider
     set interactions_counter interactions_counter + 1
     set utility-gain utility-gain + ug
 end
@@ -595,6 +650,16 @@ to-report normalized [_min _max x]
     report (x - _min) / (_max - _min)
 end
 
+to-report random-utility
+    ifelse (profile = "intermittent")[
+        set utility-gain random-float-range utility-gain-min utility-gain-max
+        report utility-gain
+    ][
+        set utility-gain max( list utility-gain-min min (list utility-gain-max (random-normal utility-gain-mu utility-gain-sigma)))
+        report utility-gain
+    ]
+end
+
 ;; | ===============================
 ;; | ========== INTERFACE ==========
 ;; | ===============================
@@ -602,8 +667,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-73
-74
+47
+48
 -1
 -1
 13.0
@@ -616,12 +681,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--2
-2
--2
-2
--2
-2
+-1
+1
+-1
+1
+-1
+1
 1
 0
 1
@@ -629,10 +694,10 @@ ticks
 30.0
 
 BUTTON
-308
-450
-371
-483
+353
+464
+416
+497
 NIL
 setup
 NIL
@@ -646,10 +711,10 @@ NIL
 1
 
 BUTTON
-379
-450
-442
-483
+424
+464
+487
+497
 NIL
 go\n
 T
@@ -663,10 +728,10 @@ NIL
 1
 
 TEXTBOX
-346
-403
-406
-421
+391
+417
+451
+435
 ACTIONS
 14
 104.0
@@ -683,10 +748,10 @@ PARAMETERS - AGENTS\n
 1
 
 INPUTBOX
-511
-455
-610
-515
+556
+434
+655
+494
 number-of-rounds
 200.0
 1
@@ -975,7 +1040,7 @@ min-radius-of-operation
 min-radius-of-operation
 0
 100
-13.0
+20.0
 1
 1
 %
@@ -1066,8 +1131,11 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 0 -2674135 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\"]"
-"NoTrust" 1.0 0 -13840069 true "" "plot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"NoTrust\"]"
+"FIRE" 1.0 0 -2674135 true "" "if(FIRE-Group?) [\nplot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true]\n]"
+"NoTrust" 1.0 0 -13840069 true "" "if(NoTrust-Group?) [\nplot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"NoTrust\"]\n]"
+"IT" 1.0 0 -7500403 true "" "if(IT-Group?) [\nplot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false]\n]"
+"IT-CR" 1.0 0 -955883 true "" "if(IT-CR-Group?) [\nplot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false]\n]"
+"IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\nplot mean [utility-gain / max (list 1 interactions_counter)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true]\n]"
 
 PLOT
 267
@@ -1106,8 +1174,11 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 1 -2674135 true "" "histogram [ug] of consumers with [trust-model = \"FIRE\"]"
-"NoTrust" 1.0 1 -13840069 true "" "histogram [ug] of consumers with [trust-model = \"NoTrust\"]"
+"FIRE" 1.0 1 -2674135 true "" "if(FIRE-Group?) [\nhistogram [ug] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true]\n]"
+"NoTrust" 1.0 1 -13840069 true "" "if(NoTrust-Group?) [\nhistogram [ug] of consumers with [trust-model = \"NoTrust\"]\n]"
+"IT" 1.0 1 -7500403 true "" "if(IT-Group?) [\nhistogram [ug] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false]\n]"
+"IT-CR" 1.0 1 -955883 true "" "if(IT-CR-Group?) [\nhistogram [ug] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false]\n]"
+"IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\nhistogram [ug] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true]\n]"
 
 TEXTBOX
 344
@@ -1202,7 +1273,7 @@ INPUTBOX
 638
 838
 service-quality-degradation-alpha
-1.0
+0.5
 1
 0
 Number
@@ -1213,54 +1284,98 @@ INPUTBOX
 181
 842
 initial-temperature
-100.0
+10.0
 1
 0
 Number
 
 SWITCH
-136
-411
-239
-444
-Use-IT?
-Use-IT?
+43
+447
+169
+480
+IT-Group?
+IT-Group?
 0
 1
 -1000
 
 SWITCH
-136
-481
-239
-514
-Use-WR?
-Use-WR?
+169
+447
+295
+480
+IT-WR-Group?
+IT-WR-Group?
 1
 1
 -1000
 
 SWITCH
-136
-446
-239
-479
-Use-CR?
-Use-CR?
+43
+480
+169
+513
+IT-CR-Group?
+IT-CR-Group?
+0
+1
+-1000
+
+SWITCH
+169
+480
+295
+513
+FIRE-Group?
+FIRE-Group?
 1
 1
 -1000
 
 SWITCH
-497
-415
-630
-448
+169
+414
+295
+447
 Use-Dynamic?
 Use-Dynamic?
 1
 1
 -1000
+
+SWITCH
+43
+414
+169
+447
+NoTrust-Group?
+NoTrust-Group?
+0
+1
+-1000
+
+MONITOR
+328
+276
+472
+321
+Number of consumers
+count consumers
+17
+1
+11
+
+MONITOR
+328
+326
+472
+371
+Number of providers
+count providers
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
