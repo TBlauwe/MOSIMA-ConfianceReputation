@@ -1055,7 +1055,7 @@ max-radius-of-operation
 max-radius-of-operation
 0
 100
-20.0
+25.0
 1
 1
 %
@@ -1284,7 +1284,7 @@ INPUTBOX
 181
 842
 initial-temperature
-10.0
+100.0
 1
 0
 Number
@@ -1296,7 +1296,7 @@ SWITCH
 480
 IT-Group?
 IT-Group?
-0
+1
 1
 -1000
 

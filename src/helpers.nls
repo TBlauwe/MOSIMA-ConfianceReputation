@@ -1,0 +1,26 @@
+;; | ======================================================
+;; | Filename : helpers.nls 
+;; | Author : Tristan de Blauwe
+;; | ======================================================
+
+to-report shaded-color [value]
+  report (value - 1 + random-float 3)
+end
+
+to-report random-float-range [_min _max]
+    report (random-float (_max - _min) + _min)
+end
+
+to-report random-range [_min _max]
+    report (random (_max - _min) + _min)
+end
+
+to-report flip-coin [probability]
+    report (random-float 1) <= probability
+end
+
+to-report normalize [_min _max x]
+    report (x - _min) / (_max - _min)
+end
+
+

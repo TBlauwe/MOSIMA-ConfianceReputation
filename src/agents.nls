@@ -1,0 +1,281 @@
+;; | ======================================================
+;; | Filename : agents.nls 
+;; | Author : Tristan de Blauwe
+;; | ======================================================
+
+
+;; | ========== BREEDS ==========
+breed [providers provider]
+breed [consumers consumer]
+
+
+;; | ========== PROVIDERS ==========
+providers-own [
+    ;; --- General
+    radius-of-operation         ;; Operational range - outside of this range, quality of service is degraded.
+    profile                     ;; Good or Intermittent or Bad - Used to determine performance level
+
+    ;; --- Knowledge
+    acquaintances               ;; Neighbours in range of operation
+
+    ;; --- Memory 
+    ratings                     ;; Associative arrays containing ratings    -  Key = ID of the the other agent - Value = [Time (int) , Rating (Float)]
+    certificates                ;; Ratings to be shown as certificat        -  ^ IDEM ^
+
+    ;; --- Misc 
+    need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
+    counter-services-provided   ;; Count how many times does this agent provided a service during this round
+
+    ;; --- Performance follows a normal distribution
+    performance-mu              ;; Normal distribution parameter
+    performance-sigma           ;; Normal distribution parameter
+    performance-min             ;; Performance must be higher than this value
+    performance-max             ;; Performance must be lower than this value
+    performance-sum             ;; Sum of performances for current round - Used for plotting
+]
+
+
+;; | ========== CONSUMERS ==========
+consumers-own [
+    ;; --- General
+    radius-of-operation         ;; Operational range - Used to determine acquaintances (Agents in radius of operation)
+    activity-level              ;; Probability to request a service, set randomly at spawn
+    utility-gain                ;; Utility gained from using providers' services
+    utility-gain-cache          ;; Last utility gained from using a provider's service
+
+    ;; --- Trust 
+    trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
+    temperature                 ;; Exploitation-Exploration dilemma
+    use-it?                     ;; Use IT component for computing trust value ?
+    use-cr?                     ;; Use CR component for computing trust value ?
+    use-wr?                     ;; Use WR component for computing trust value ?
+
+    ;; --- Knowledge
+    acquaintances               ;; Neighbours in range of operation
+    reachable-providers         ;; Providers that the agent can contact
+
+    ;; --- Memory 
+    ratings                     ;; Associative arrays containing ratings    -  Key = ID of the the other agent - Value = [Time (int) , Rating (Float)]
+    certificates                ;; Ratings to be shown as certificat        -  ^ IDEM ^
+
+    ;; --- Misc 
+    need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
+    counter-interactions        ;; Number of interaction
+    counter-failed-interactions ;; Number of failed interaction (No providers found)
+]
+
+
+;; | ========== CONSTRUCTORS ==========
+to spawn-providers [_number _profile _color]
+    create-providers _number[
+        ;; --- General
+        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
+        set profile _profile
+
+        ;; --- Knowledge
+        set acquaintances no-turtles            
+
+        ;; --- Memory 
+        set ratings table:make
+        set certificates []
+
+        ;; --- Misc 
+        set need-update? true     
+        set counter-services-provided 0
+
+        ;; --- Performance follows a normal distribution
+        if (_profile = "good")[
+            set performance-mu random-float-range 5 10
+            set performance-sigma 1.0
+            set performance-min 5
+            set performance-max 10
+        ]
+        if (_profile = "ordinary")[
+            set performance-mu random-float-range 0 5
+            set performance-sigma 1.0
+            set performance-min 0
+            set performance-max 5
+        ]
+        if (_profile = "bad")[
+            set performance-mu random-float-range -10 0
+            set performance-sigma 2.0
+            set performance-min -10
+            set performance-max 0
+        ]
+        if (_profile = "intermittent")[
+            set performance-mu 0        ;;not used
+            set performance-sigma 0     ;;not used
+            set performance-min -5
+            set performance-max 5
+        ]
+
+        ;; --- Graphical
+        set-xyz-inside-sphere               ;; Distribute turtles uniformely inside a sphere
+        set color (shaded-color _color)
+        set shape providers-shape
+        set size 0.025
+    ]
+end
+
+to spawn-consumers [_number _trust-model _use-it? _use-cr? _use-wr? _color]
+    create-consumers _number[
+        ;; --- General
+        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
+        set activity-level (random-float-range min-activity-level max-activity-level)
+        set utility-gain 0            
+        set utility-gain-cache 0
+
+        ;; --- Trust 
+        set trust-model _trust-model
+        set temperature initial-temperature                 
+        set use-it? _use-it?
+        set use-cr? _use-cr?
+        set use-wr? _use-wr?
+
+        ;; --- Knowledge
+        set acquaintances no-turtles             
+        set reachable-providers no-turtles        
+
+        ;; --- Memory 
+        set ratings table:make
+
+        ;; --- Misc 
+        set need-update? true
+        set counter-interactions 0       
+        set counter-failed-interactions 0 
+
+        ;; --- Graphical
+        set-xyz-inside-sphere               ;; Distribute turtles uniformely inside a sphere
+        set color (shaded-color _color)
+        set shape consumers-shape 
+        set size 0.025
+    ]
+end
+
+
+;; | ========== SHARED PROCEDURES (Used by both agents) ==========
+to update
+    set acquaintances ((other turtles) with [distance myself <= radius-of-operation])
+    set need-update? false
+end
+
+
+;; | ========== PROVIDERS PROCEDURES ==========
+
+;; Add a rating to his certificates. Keep the H (history-size) best ones
+to add-certificate [rating]
+    let sorted_certificates (sort-by [ [a b] -> (get-value-from-rating a) > (get-value-from-rating b)] (fput rating certificates))
+    set certificates sublist sorted_certificates 0 (min (list history-size (length sorted_certificates)))
+end
+
+;; Returns a performance according to his profile
+to-report get-performance
+    let performance 0
+
+    ifelse (profile = "intermittent")[
+        set performance (random-float-range performance-min performance-max)
+    ][
+        set performance max( list performance-min min (list performance-max (random-normal performance-mu performance-sigma)))
+    ]
+
+    set performance-sum (performance-sum + performance)
+    set counter-services-provided (counter-services-provided + 1)
+    report performance
+end
+
+;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
+to-report service-quality-degradation [_provider performance]
+    let _distance ([distance myself] of _provider)
+    let degradation (- service-quality-degradation-alpha * (_distance - [radius-of-operation] of _provider) + 1)
+    report ifelse-value(  _distance > [radius-of-operation] of _provider) [performance * degradation] [performance]
+end
+
+to update-provider
+    update
+end
+
+
+;; | ========== CONSUMERS PROCEDURES ==========
+
+;; Returns reachable providers in radius of operation
+;; If none, ask acquaintance to find one (recursive)
+to-report find-providers [excluded_agents length_threshold]
+    if(count acquaintances > 0) [
+        ;; First - Is there any providers nearby ?
+        let _providers (acquaintances with [ breed = providers ])
+
+        ;; Even if we already have providers, let's get others nearby
+        if (length_threshold > 0)[
+
+            let _acquaintances (acquaintances with [ (not member? self excluded_agents) and (breed = consumers) ])
+
+            set excluded_agents (turtle-set self excluded_agents _acquaintances)
+
+            ask _acquaintances[
+                set _providers (turtle-set
+                    _providers
+                    find-providers (excluded_agents) (length_threshold - 1))
+            ]
+        ]
+        report _providers
+    ]
+    report no-turtles
+end
+
+;; Does the consumer need a service ?
+to-report need-service?
+  report flip-coin activity-level
+end
+
+;; Returns the selected provider by the process. The selection process relies on the agent's trust model.
+;; FIRE - provider which is likely to be the most reliable. 
+;; NoTrust - select randomly provider from the list.
+to-report select-provider
+    if(trust-model = "FIRE") [
+        report one-of reachable-providers
+    ]
+    report one-of reachable-providers
+end
+
+;; Inform the provider of his rating
+to sent-rating [agent rating]
+    ask agent [
+        add-rating rating
+        add-certificate rating
+    ]
+end
+
+;; Update some variables when environnement is changing (So at spawn and when dynamism is used)
+to update-consumer
+    update
+    set reachable-providers (find-providers (turtle-set self) (referral-length-threshold))
+end
+
+;; Returns an utility gain based on provider's service quality
+to use-service [_provider]
+    set utility-gain-cache (service-quality-degradation (_provider) ([get-performance] of _provider))
+    set counter-interactions counter-interactions + 1
+    set utility-gain utility-gain + utility-gain-cache
+end
+
+
+;; | ========== WORLD PROCEDURES ==========
+
+;; Set a turtle position to a random point in a sphere
+;; From : https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
+;; Uniform Distribution to prevent aggregation in center
+to set-xyz-inside-sphere
+  let u (random-float 1000)
+  let v (random-float 1)
+
+  let theta (2 * pi * u)
+  let phi (acos(2 * v - 1))
+
+  let r (random-float 1) ^ (1 / 3)
+
+  let x (r * sin(phi) * cos(theta)) * radius
+  let y (r * sin(phi) * sin(theta)) * radius
+  let z (r * cos(phi)) * radius
+
+  setxyz x y z
+end

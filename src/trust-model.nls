@@ -1,0 +1,49 @@
+;; | ======================================================
+;; | Filename : trust-model.nls 
+;; | Author : Tristan de Blauwe
+;; | ======================================================
+
+
+;; | ========== TRUST COMPONENTS ==========
+
+;; | ========== RATINGS ==========
+to add-rating [rating]
+    let id (get-agent-from-rating rating)
+    ifelse (table:has-key? ratings id)[
+        let new_ratings (fput rating (table:get ratings id))
+        if (length new_ratings > history-size)[set new_ratings but-last new_ratings]
+    ][
+        table:put ratings id (list rating)
+    ]
+end
+
+to-report get-agent-from-rating [rating]
+    report item 0 rating 
+end
+
+to-report get-time-from-rating [rating]
+    report item 1 rating
+end
+
+to-report get-value-from-rating [rating]
+    report item 2 rating
+end
+
+to-report new-rating [agent value]
+    report (list ([who] of agent) ticks (value / 10))
+end
+
+to-report query [agent interaction value]
+  let useAgent (agent != "any")
+  let useInteraction (interaction != "any")
+  let useValue (value != "any")
+
+  let response (
+    filter [ elt ->
+      (ifelse-value(useAgent) [(item 0 elt) = agent] [true]) and
+      (ifelse-value(useInteraction) [(item 2 elt) = interaction] [true]) and
+      (ifelse-value(useValue) [(item 3 elt) = value] [true])
+    ] ratings )
+  report response
+end
+
