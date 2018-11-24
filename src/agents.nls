@@ -26,11 +26,8 @@ providers-own [
     need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
     counter-services-provided   ;; Count how many times does this agent provided a service during this round
 
-    ;; --- Performance follows a normal distribution
+    ;; --- Performance 
     performance-mu              ;; Normal distribution parameter
-    performance-sigma           ;; Normal distribution parameter
-    performance-min             ;; Performance must be higher than this value
-    performance-max             ;; Performance must be lower than this value
     performance-sum             ;; Sum of performances for current round - Used for plotting
 ]
 
@@ -45,10 +42,9 @@ consumers-own [
 
     ;; --- Trust 
     trust-model                 ;; Which trust-model is used (NoTrust or FIRE)
+    group                       ;; Which group does he belongs to ? Define which components he should use
     temperature                 ;; Exploitation-Exploration dilemma
-    use-it?                     ;; Use IT component for computing trust value ?
-    use-cr?                     ;; Use CR component for computing trust value ?
-    use-wr?                     ;; Use WR component for computing trust value ?
+    liar                        ;; Is this agent a liar ?
 
     ;; --- Knowledge
     acquaintances               ;; Neighbours in range of operation
@@ -83,31 +79,8 @@ to spawn-providers [_number _profile _color]
         set need-update? true     
         set counter-services-provided 0
 
-        ;; --- Performance follows a normal distribution
-        if (_profile = "good")[
-            set performance-mu random-float-range 5 10
-            set performance-sigma 1.0
-            set performance-min 5
-            set performance-max 10
-        ]
-        if (_profile = "ordinary")[
-            set performance-mu random-float-range 0 5
-            set performance-sigma 1.0
-            set performance-min 0
-            set performance-max 5
-        ]
-        if (_profile = "bad")[
-            set performance-mu random-float-range -10 0
-            set performance-sigma 2.0
-            set performance-min -10
-            set performance-max 0
-        ]
-        if (_profile = "intermittent")[
-            set performance-mu 0        ;;not used
-            set performance-sigma 0     ;;not used
-            set performance-min -5
-            set performance-max 5
-        ]
+        ;; --- Performance 
+        set performance-mu (random-float-range (get-min profile) (get-max profile))
         set performance-sum 0
 
         ;; --- Graphical
@@ -118,7 +91,7 @@ to spawn-providers [_number _profile _color]
     ]
 end
 
-to spawn-consumers [_number _trust-model _use-it? _use-cr? _use-wr? _color]
+to spawn-consumers [_number _trust-model _group _color]
     create-consumers _number[
         ;; --- General
         set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
@@ -128,10 +101,15 @@ to spawn-consumers [_number _trust-model _use-it? _use-cr? _use-wr? _color]
 
         ;; --- Trust 
         set trust-model _trust-model
+        set group _group
         set temperature initial-temperature                 
-        set use-it? _use-it?
-        set use-cr? _use-cr?
-        set use-wr? _use-wr?
+        
+        ;; Pour respecter la proportion de menteurs par groupe :
+        set liar false
+
+        let proba-liar  ( (_number * (liar-per-group / 100 )) - (count consumers with [liar = true and trust-model = _trust-model and group = _group ]) ) /
+                        ( (_number) - (count consumers with [trust-model = _trust-model and group = _group]) + 1) 
+        if(flip-coin proba-liar)[ set liar true ]
 
         ;; --- Knowledge
         set acquaintances no-turtles             
@@ -164,6 +142,13 @@ to-report has-ratings-from [agent]
     report table:has-key? ratings ([who] of agent) 
 end
 
+;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
+to-report service-quality-degradation [_provider _consumer performance]
+    let _distance ([distance _consumer] of _provider)
+    let degradation (- service-quality-degradation-alpha * (_distance - [radius-of-operation] of _provider) + 1)
+    report ifelse-value(  _distance > [radius-of-operation] of _provider) [performance * degradation] [performance]
+end
+
 
 ;; | ========== PROVIDERS PROCEDURES ==========
 
@@ -173,30 +158,36 @@ to add-certificate [rating]
     set certificates sublist sorted_certificates 0 min (list history-size (length sorted_certificates))
 end
 
-;; Returns a performance according to his profile
-to-report get-performance
-    ifelse (profile = "intermittent")[
-        report (random-float-range performance-min performance-max)
+;; Compute performance
+to-report compute-performance-from-profile [_profile]
+    let _min get-min _profile
+    let _max get-max _profile
+
+    ifelse (_profile = "intermittent")[
+        report random-float-range _min _max
     ][
-        report max ( list performance-min min (list performance-max (random-normal performance-mu performance-sigma)))
+        report max ( list _min min (list _max (random-normal performance-mu (get-sigma _profile))))
     ]
 end
 
+;; Returns a performance according to his profile
+to-report compute-performance 
+    report compute-performance-from-profile profile
+end
+
+;; Get the expected performance of a provider, degraded by the distance
+to-report get-expected-performance [_consumer]
+    report service-quality-degradation self _consumer compute-performance
+end
+
 ;; Use a provider's service and get his performance
-to-report get-performance-from-service
-    let performance get-performance
+to-report provide-service [_consumer]
+    let performance compute-performance
 
     set performance-sum (performance-sum + performance)
     set counter-services-provided (counter-services-provided + 1)
 
-    report performance 
-end
-
-;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
-to-report service-quality-degradation [_provider performance]
-    let _distance ([distance myself] of _provider)
-    let degradation (- service-quality-degradation-alpha * (_distance - [radius-of-operation] of _provider) + 1)
-    report ifelse-value(  _distance > [radius-of-operation] of _provider) [performance * degradation] [performance]
+    report get-expected-performance _consumer 
 end
 
 to update-provider
@@ -232,7 +223,12 @@ end
 
 ;; Returns witness for a specified provider
 to-report find-witness-ratings [excluded-agents length-threshold _provider]
-    let _ratings (get-ratings-from _provider)
+    let _ratings []
+    ifelse(not liar)[
+        set _ratings (get-ratings-from _provider)
+    ][
+        set _ratings (fput (generate-fake-ratings _provider) _ratings)
+    ]
 
     ;; Si pas de ratings sur cet agent, on cherche d'autres témoins si la limite n'a pas été atteinte
     if(length _ratings = 0 and length-threshold > 0)[
@@ -251,6 +247,13 @@ to-report find-witness-ratings [excluded-agents length-threshold _provider]
         ]
     ]
     report _ratings 
+end
+
+;; For lying agents - Returns a fake ratings
+to-report generate-fake-ratings [_provider]
+    let performance ([compute-performance-from-profile (get-opposite (profile))] of _provider)
+    let value (service-quality-degradation (_provider) self (performance))
+    report (new-rating _provider value)
 end
 
 ;; Does the consumer need a service ?
@@ -302,9 +305,10 @@ to-report selection-process-FIRE
             report one-of noTrustValue_agent
         ]
     ][
+        let best-provider (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent)
 
-        let expected_exploration_return ([get-performance] of (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent))
-        let expected_exploitation_return (mean [get-performance] of reachable-providers)
+        let expected_exploration_return ([get-expected-performance myself] of best-provider)
+        let expected_exploitation_return (mean [get-expected-performance myself] of reachable-providers)
 
         let normalization-term ( exp ((expected_exploitation_return) / temperature) + exp ((expected_exploration_return) / temperature))
 
@@ -317,11 +321,6 @@ to-report selection-process-FIRE
             report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent ;; Exploitation
         ]
     ]
-end
-
-;; Get the performance of a provider, degraded by the distance
-to-report get-performance-from-provider [_provider]
-    report (service-quality-degradation (_provider) ([get-performance-from-service] of _provider))
 end
 
 ;; Inform the provider of his rating
@@ -340,7 +339,7 @@ end
 
 ;; Returns an utility gain based on provider's service quality
 to use-service [_provider]
-    set utility-gain-cache (get-performance-from-provider _provider)
+    set utility-gain-cache ([provide-service myself] of _provider)
     set counter-interactions counter-interactions + 1
     set utility-gain utility-gain + utility-gain-cache
 end

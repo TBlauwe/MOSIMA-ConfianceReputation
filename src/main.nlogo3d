@@ -20,7 +20,10 @@ extensions [
 
 ;; | ========== GLOBALS ==========
 globals [
-    radius      ;; World radius
+    radius                  ;; World radius
+    group-params            ;; Table containing parameters for corresponding groups (IT, IT-WR, IT-CR, etc)
+    performance-params      ;; Table containing parameters for generating a performance based on the provider's profile
+    opposite-profile        ;; Table containing opposite profile for each one
 ]
 
 
@@ -38,23 +41,23 @@ to setup
 
     ;; CONSUMERS
     if (NoTrust-Group?)[
-      spawn-consumers number-of-consumers "NoTrust" false false false 65
+      spawn-consumers number-of-consumers "NoTrust" "NoTrust" 65
     ]
 
     if (IT-Group?)[
-      spawn-consumers number-of-consumers "FIRE" true false false 15
+      spawn-consumers number-of-consumers "FIRE" "IT" 15
     ]
 
     if (IT-CR-Group?)[
-      spawn-consumers number-of-consumers "FIRE" true true false 15
+      spawn-consumers number-of-consumers "FIRE" "IT-CR" 15
     ]
 
     if (IT-WR-Group?)[
-      spawn-consumers number-of-consumers "FIRE" true false true 15
+      spawn-consumers number-of-consumers "FIRE" "IT-WR" 15
     ]
 
     if (FIRE-Group?)[
-      spawn-consumers number-of-consumers "FIRE" true true true 15
+      spawn-consumers number-of-consumers "FIRE" "FIRE" 15
     ]
 
     reset-ticks
@@ -65,14 +68,68 @@ to go
         [stop]
 
     interaction-round
-
     tick
 end
 
+;; | ========== GLOBALS RELATED ==========
+
+;; Performance
+to-report get-min [_profile]
+    report item 0 table:get performance-params _profile
+end
+
+to-report get-max [_profile]
+    report item 1 table:get performance-params _profile
+end
+
+to-report get-sigma [_profile]
+    report item 2 table:get performance-params _profile
+end
+
+;; Profil
+to-report get-opposite [_profile]
+    report table:get opposite-profile _profile
+end
+
+;; Group
+to-report use-it?
+    report (item 0 table:get group-params group )
+end
+
+to-report use-cr?
+    report (item 1 table:get group-params group )
+end
+
+to-report use-wr?
+    report (item 2 table:get group-params group )
+end
 
 ;; | ========== SETUP RELATED ==========
 to setup-globals
     set radius 1.0
+
+    ;; Performance
+    set performance-params table:make
+                                                ;;mu(Min Max) Sigma
+    table:put performance-params "good"         (list 5 10 1.0)
+    table:put performance-params "ordinary"     (list 0 5 2.0)
+    table:put performance-params "bad"          (list -10 0 2.0)
+    table:put performance-params "intermittent" (list -5 5 2.0)
+
+    ;; Profil
+    set opposite-profile table:make
+    table:put opposite-profile "good" "bad"
+    table:put opposite-profile "ordinary" "intermittent"
+    table:put opposite-profile "bad" "good"
+    table:put opposite-profile "intermittent" "ordinary"
+
+    ;; Group
+    set group-params table:make
+                                        ;;     IT    CR    WR
+    table:put group-params "IT"         (list true false false)
+    table:put group-params "IT-WR"      (list true false true)
+    table:put group-params "IT-CR"      (list true true false)
+    table:put group-params "FIRE"       (list true true true)
 end
 
 
@@ -117,6 +174,21 @@ to interaction-round
         ;; ===== Tick Update =====
         set temperature ifelse-value(temperature = 1) [temperature] [temperature - 1]
     ]
+end
+
+
+;; | ========== PLOT RELATED ==========
+
+to-report get-mean-UG-of-consumers [_group]
+    report mean ([utility-gain / max (list 1 counter-interactions)] of consumers with [group = _group and counter-failed-interactions = 0])
+end
+
+to-report get-mean-UG-of-providers [_profile]
+    report [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = _profile]
+end
+
+to-report get-last-UG-of-consumers [_group]
+    report [utility-gain-cache] of consumers with [group = _group and counter-failed-interactions = 0]
 end
 
 
@@ -521,11 +593,11 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 0 -2674135 true "" "if(FIRE-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true and counter-failed-interactions = 0]\n]"
-"NoTrust" 1.0 0 -13840069 true "" "if(NoTrust-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"NoTrust\" and counter-failed-interactions = 0]\n]"
-"IT" 1.0 0 -7500403 true "" "if(IT-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false and counter-failed-interactions = 0 and counter-failed-interactions = 0]\n]"
-"IT-CR" 1.0 0 -955883 true "" "if(IT-CR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false and counter-failed-interactions = 0]\n]"
-"IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true and counter-failed-interactions = 0]\n]"
+"FIRE" 1.0 0 -2674135 true "" "if(FIRE-Group?) [\n    plot get-mean-UG-of-consumers \"FIRE\"\n]"
+"NoTrust" 1.0 0 -13840069 true "" "if(NoTrust-Group?) [\n    plot get-mean-UG-of-consumers \"NoTrust\"\n]"
+"IT" 1.0 0 -7500403 true "" "if(IT-Group?) [\n    plot get-mean-UG-of-consumers \"IT\"\n]"
+"IT-CR" 1.0 0 -955883 true "" "if(IT-CR-Group?) [\n    plot get-mean-UG-of-consumers \"IT-CR\"\n]"
+"IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\n    plot get-mean-UG-of-consumers \"IT-WR\"\n]"
 
 PLOT
 252
@@ -543,10 +615,10 @@ true
 true
 "" ""
 PENS
-"good" 1.0 1 -13345367 true "" "histogram [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = \"good\"]"
-"ordinary" 1.0 1 -11221820 true "" "histogram [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = \"ordinary\"]"
-"bad" 1.0 1 -2064490 true "" "histogram [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = \"bad\"]"
-"intermittent" 1.0 1 -5825686 true "" "histogram [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = \"intermittent\"]"
+"good" 1.0 1 -13345367 true "" "histogram get-mean-UG-of-providers \"good\""
+"ordinary" 1.0 1 -11221820 true "" "histogram get-mean-UG-of-providers \"ordinary\""
+"bad" 1.0 1 -2064490 true "" "histogram get-mean-UG-of-providers \"bad\""
+"intermittent" 1.0 1 -5825686 true "" "histogram get-mean-UG-of-providers \"intermittent\""
 
 PLOT
 520
@@ -559,16 +631,16 @@ Units
 -10.0
 10.0
 0.0
-10.0
+100.0
 true
 true
 "" ""
 PENS
-"FIRE" 1.0 1 -2674135 true "" "if(FIRE-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true  and counter-failed-interactions = 0]\n]"
-"NoTrust" 1.0 1 -13840069 true "" "if(NoTrust-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"NoTrust\" and counter-failed-interactions = 0]\n]"
-"IT" 1.0 1 -7500403 true "" "if(IT-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false and counter-failed-interactions = 0]\n]"
-"IT-CR" 1.0 1 -955883 true "" "if(IT-CR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false and counter-failed-interactions = 0]\n]"
-"IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true and counter-failed-interactions = 0]\n]"
+"FIRE" 1.0 1 -2674135 true "" "if(FIRE-Group?) [\n    histogram get-last-UG-of-consumers \"FIRE\"\n]"
+"NoTrust" 1.0 1 -13840069 true "" "if(NoTrust-Group?) [\n    histogram get-last-UG-of-consumers \"NoTrust\"\n]"
+"IT" 1.0 1 -7500403 true "" "if(IT-Group?) [\n    histogram get-last-UG-of-consumers \"IT\"\n]"
+"IT-CR" 1.0 1 -955883 true "" "if(IT-CR-Group?) [\n    histogram get-last-UG-of-consumers \"IT-CR\"\n]"
+"IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\n    histogram get-last-UG-of-consumers \"IT-WR\"\n]"
 
 MONITOR
 225
@@ -643,7 +715,7 @@ SWITCH
 462
 IT-WR-Group?
 IT-WR-Group?
-1
+0
 1
 -1000
 
@@ -654,7 +726,7 @@ SWITCH
 495
 IT-CR-Group?
 IT-CR-Group?
-0
+1
 1
 -1000
 
@@ -773,6 +845,21 @@ TEXTBOX
 25
 104.0
 0
+
+SLIDER
+384
+629
+579
+662
+liar-per-group
+liar-per-group
+0
+100
+0.0
+0.5
+1
+%
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
