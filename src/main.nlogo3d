@@ -101,7 +101,7 @@ to interaction-round
                 let _provider select-provider
 
                 ;; Interact with the provider
-                use-service _provider 
+                use-service _provider
 
                 ;; Rate
                 let rating (new-rating _provider utility-gain-cache)
@@ -154,10 +154,10 @@ ticks
 30.0
 
 BUTTON
-353
-464
-416
-497
+308
+425
+371
+458
 NIL
 setup
 NIL
@@ -171,10 +171,10 @@ NIL
 1
 
 BUTTON
-424
-464
-487
-497
+379
+425
+442
+458
 NIL
 go\n
 T
@@ -187,31 +187,11 @@ NIL
 NIL
 1
 
-TEXTBOX
-391
-417
-451
-435
-ACTIONS
-14
-104.0
-1
-
-TEXTBOX
-304
-548
-454
-566
-PARAMETERS - AGENTS\n
-14
-104.0
-1
-
 INPUTBOX
-556
-434
-655
-494
+491
+415
+590
+475
 number-of-rounds
 200.0
 1
@@ -219,10 +199,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-577
-581
-693
-641
+582
+559
+698
+619
 number-of-consumers
 500.0
 1
@@ -230,40 +210,30 @@ number-of-consumers
 Number
 
 TEXTBOX
-312
-963
-438
-988
-PARAMETERS - FIRE\n\n
-14
-104.0
-1
-
-TEXTBOX
-425
-751
-598
-769
+480
+704
+653
+722
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-85
-749
-278
-787
+105
+701
+298
+739
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 SLIDER
-79
-846
-282
-879
+99
+798
+302
+831
 min-activity-level
 min-activity-level
 0
@@ -275,10 +245,10 @@ chance
 HORIZONTAL
 
 SLIDER
-79
-882
-281
-915
+99
+834
+301
+867
 max-activity-level
 max-activity-level
 0
@@ -290,10 +260,10 @@ chance
 HORIZONTAL
 
 INPUTBOX
-175
-995
-302
-1055
+176
+944
+303
+1004
 recency-scaling-factor
 7.21347520444
 1
@@ -301,10 +271,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-578
-644
-693
-704
+583
+622
+698
+682
 history-size
 10.0
 1
@@ -312,10 +282,10 @@ history-size
 Number
 
 INPUTBOX
-175
-1058
-302
-1118
+176
+1007
+303
+1067
 branching-factor
 2.0
 1
@@ -323,10 +293,10 @@ branching-factor
 Number
 
 INPUTBOX
-175
-1120
-302
-1180
+176
+1069
+303
+1129
 referral-length-threshold
 5.0
 1
@@ -334,10 +304,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-306
-995
-435
-1055
+307
+944
+436
+1004
 interaction-trust-coeff
 2.0
 1
@@ -345,10 +315,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-306
-1058
-435
-1118
+307
+1007
+436
+1067
 witness-reputation-coeff
 2.0
 1
@@ -356,10 +326,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-306
-1120
-435
-1180
+307
+1069
+436
+1129
 certified-reputation-coeff
 0.5
 1
@@ -367,10 +337,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-439
-995
-587
-1055
+440
+944
+588
+1004
 interaction-trust-reliability
 0.69314718056
 1
@@ -378,10 +348,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-439
-1058
-587
-1118
+440
+1007
+588
+1067
 witness-reputation-reliability
 0.69314718056
 1
@@ -389,10 +359,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-439
-1120
-587
-1180
+440
+1069
+588
+1129
 certified-reputation-reliability
 0.69314718056
 1
@@ -400,10 +370,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-188
-782
-282
-842
+208
+734
+302
+794
 consumers-shape
 person
 1
@@ -411,10 +381,10 @@ person
 String
 
 INPUTBOX
-373
-778
-458
-838
+428
+731
+513
+791
 providers-shape
 house
 1
@@ -422,61 +392,21 @@ house
 String
 
 TEXTBOX
-90
-930
-648
-948
----------------------------------------------------------------------
+0
+889
+762
+914
+====================================================
 25
 104.0
 1
 
 TEXTBOX
-81
-516
-643
+-1
+510
+769
 536
----------------------------------------------------------------------
-25
-104.0
-1
-
-TEXTBOX
-5
-10
-31
-3234
-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-25
-103.0
-1
-
-TEXTBOX
-84
-719
-648
-740
----------------------------------------------------------------------
-25
-104.0
-1
-
-TEXTBOX
-714
-10
-736
-3234
-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-25
-104.0
-1
-
-TEXTBOX
-102
-1181
-653
-1199
----------------------------------------------------------------------
+==============================================
 25
 104.0
 1
@@ -492,10 +422,10 @@ TEXTBOX
 1
 
 SLIDER
-378
-581
-574
-614
+383
+559
+579
+592
 min-radius-of-operation
 min-radius-of-operation
 0
@@ -507,10 +437,10 @@ min-radius-of-operation
 HORIZONTAL
 
 SLIDER
-378
-616
-574
-649
+383
+594
+579
+627
 max-radius-of-operation
 max-radius-of-operation
 0
@@ -522,10 +452,10 @@ max-radius-of-operation
 HORIZONTAL
 
 INPUTBOX
-37
-581
-204
-641
+42
+559
+209
+619
 number-of-good-providers
 10.0
 1
@@ -533,10 +463,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-37
-644
-204
-704
+42
+622
+209
+682
 number-of-ordinary-providers
 40.0
 1
@@ -544,10 +474,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-207
-581
-374
-641
+212
+559
+379
+619
 number-of-intermittent-providers
 5.0
 1
@@ -555,10 +485,10 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-207
-643
-374
-703
+212
+621
+379
+681
 number-of-bad-providers
 45.0
 1
@@ -566,42 +496,42 @@ number-of-bad-providers
 Number
 
 TEXTBOX
-78
-378
-647
-396
----------------------------------------------------------------------
+0
+357
+759
+385
+============================================
 25
 104.0
 1
 
 PLOT
-31
-54
-257
-204
+1
+48
+252
+198
 UG Mean
 Interaction
 UG Mean
 0.0
-10.0
+200.0
 0.0
 10.0
 true
 true
 "" ""
 PENS
-"FIRE" 1.0 0 -2674135 true "" "if(FIRE-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true]\n]"
-"NoTrust" 1.0 0 -13840069 true "" "if(NoTrust-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"NoTrust\"]\n]"
-"IT" 1.0 0 -7500403 true "" "if(IT-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false]\n]"
-"IT-CR" 1.0 0 -955883 true "" "if(IT-CR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false]\n]"
-"IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true]\n]"
+"FIRE" 1.0 0 -2674135 true "" "if(FIRE-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true and counter-failed-interactions = 0]\n]"
+"NoTrust" 1.0 0 -13840069 true "" "if(NoTrust-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"NoTrust\" and counter-failed-interactions = 0]\n]"
+"IT" 1.0 0 -7500403 true "" "if(IT-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false and counter-failed-interactions = 0 and counter-failed-interactions = 0]\n]"
+"IT-CR" 1.0 0 -955883 true "" "if(IT-CR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false and counter-failed-interactions = 0]\n]"
+"IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\nplot mean [utility-gain / max (list 1 counter-interactions)] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true and counter-failed-interactions = 0]\n]"
 
 PLOT
-267
-53
-500
-203
+252
+48
+520
+198
 Provider's Mean Performance
 Utility
 Units
@@ -619,10 +549,10 @@ PENS
 "intermittent" 1.0 1 -5825686 true "" "histogram [performance-sum / max (list 1 counter-services-provided)] of providers with [profile = \"intermittent\"]"
 
 PLOT
-503
-52
-703
-202
+520
+48
+750
+198
 Consumer's Utility
 Utilty
 Units
@@ -634,27 +564,17 @@ true
 true
 "" ""
 PENS
-"FIRE" 1.0 1 -2674135 true "" "if(FIRE-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true]\n]"
-"NoTrust" 1.0 1 -13840069 true "" "if(NoTrust-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"NoTrust\"]\n]"
-"IT" 1.0 1 -7500403 true "" "if(IT-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false]\n]"
-"IT-CR" 1.0 1 -955883 true "" "if(IT-CR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false]\n]"
-"IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true]\n]"
-
-TEXTBOX
-344
-10
-399
-28
-STATS
-14
-104.0
-1
+"FIRE" 1.0 1 -2674135 true "" "if(FIRE-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = true  and counter-failed-interactions = 0]\n]"
+"NoTrust" 1.0 1 -13840069 true "" "if(NoTrust-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"NoTrust\" and counter-failed-interactions = 0]\n]"
+"IT" 1.0 1 -7500403 true "" "if(IT-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = false and counter-failed-interactions = 0]\n]"
+"IT-CR" 1.0 1 -955883 true "" "if(IT-CR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = true and use-wr? = false and counter-failed-interactions = 0]\n]"
+"IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\nhistogram [utility-gain-cache] of consumers with [trust-model = \"FIRE\" and use-it? = true and use-cr? = false and use-wr? = true and counter-failed-interactions = 0]\n]"
 
 MONITOR
-180
-224
-324
-269
+225
+254
+369
+299
 Total Interaction
 sum [counter-interactions] of consumers
 17
@@ -662,10 +582,10 @@ sum [counter-interactions] of consumers
 11
 
 MONITOR
-32
-223
-176
-268
+225
+209
+369
+254
 Current Round
 ticks
 17
@@ -673,10 +593,10 @@ ticks
 11
 
 MONITOR
-328
-224
-472
-269
+225
+298
+369
+343
 Total Failed Interactions
 sum [counter-failed-interactions] of consumers
 17
@@ -684,10 +604,10 @@ sum [counter-failed-interactions] of consumers
 11
 
 INPUTBOX
-466
-778
-638
-838
+521
+731
+693
+791
 service-quality-degradation-alpha
 0.5
 1
@@ -695,21 +615,21 @@ service-quality-degradation-alpha
 Number
 
 INPUTBOX
-79
-782
-181
-842
+99
+734
+201
+794
 initial-temperature
-10.0
+100.0
 1
 0
 Number
 
 SWITCH
-43
-447
-169
-480
+14
+429
+140
+462
 IT-Group?
 IT-Group?
 0
@@ -717,10 +637,10 @@ IT-Group?
 -1000
 
 SWITCH
-169
-447
-295
-480
+140
+429
+266
+462
 IT-WR-Group?
 IT-WR-Group?
 1
@@ -728,10 +648,10 @@ IT-WR-Group?
 -1000
 
 SWITCH
-43
-480
-169
-513
+14
+462
+140
+495
 IT-CR-Group?
 IT-CR-Group?
 0
@@ -739,10 +659,10 @@ IT-CR-Group?
 -1000
 
 SWITCH
-169
-480
-295
-513
+140
+462
+266
+495
 FIRE-Group?
 FIRE-Group?
 1
@@ -750,10 +670,10 @@ FIRE-Group?
 -1000
 
 SWITCH
-169
-414
-295
-447
+140
+396
+266
+429
 Use-Dynamic?
 Use-Dynamic?
 1
@@ -761,10 +681,10 @@ Use-Dynamic?
 -1000
 
 SWITCH
-43
-414
-169
-447
+14
+396
+140
+429
 NoTrust-Group?
 NoTrust-Group?
 0
@@ -772,10 +692,10 @@ NoTrust-Group?
 -1000
 
 MONITOR
-328
-276
-472
-321
+369
+254
+513
+299
 Number of consumers
 count consumers
 17
@@ -783,15 +703,76 @@ count consumers
 11
 
 MONITOR
-180
-276
-324
-321
+369
+209
+513
+254
 Number of providers
 count providers
 17
 1
 11
+
+MONITOR
+369
+298
+513
+343
+Useless Consumer
+count consumers with [counter-failed-interactions > 0]
+17
+1
+11
+
+TEXTBOX
+-2
+10
+758
+41
+===========================================
+25
+104.0
+0
+
+TEXTBOX
+322
+10
+432
+41
+  STATS  
+25
+104.0
+0
+
+TEXTBOX
+308
+356
+449
+387
+  ACTIONS  
+25
+104.0
+0
+
+TEXTBOX
+244
+511
+538
+544
+  PARAMETERS - AGENTS  
+25
+104.0
+0
+
+TEXTBOX
+253
+891
+520
+920
+  PARAMETERS - FIRE
+25
+104.0
+0
 
 @#$#@#$#@
 ## WHAT IS IT?

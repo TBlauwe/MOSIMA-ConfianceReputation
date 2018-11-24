@@ -51,7 +51,7 @@ end
 
 ;; Return the following list (value, reliability) if computable
 to-report trust-value-it [agent]
-    let _ratings (table:get-or-default ratings ([who] of agent) [])
+    let _ratings (get-ratings-from agent)
 
     ifelse(length _ratings > 0)[
         let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
@@ -93,8 +93,21 @@ end
 
 
 ;; ========== WR ==========
+;; Same as IT except for the ratings collected
 to-report trust-value-wr [agent]
-    report []
+    let _ratings (find-witness-ratings (turtle-set self) referral-length-threshold agent)
+
+    ifelse(length _ratings > 0)[
+        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
+        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
+        let _trust-value numerateur / denominateur
+                            
+        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
+
+        report (list (_trust-value) ((1 - exp ( - witness-reputation-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+    ][
+        report []
+    ]
 end
 
 ;; WR Rating reliability
@@ -117,6 +130,11 @@ to add-rating [rating]
     ][
         table:put ratings id (list rating)
     ]
+end
+
+;; Returns ratings concerning an agent
+to-report get-ratings-from [agent]
+    report table:get-or-default ratings ([who] of agent) []
 end
 
 to-report get-agent-from-rating [rating]

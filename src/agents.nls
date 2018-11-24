@@ -160,6 +160,10 @@ to update
     set need-update? false
 end
 
+to-report has-ratings-from [agent]
+    report table:has-key? ratings ([who] of agent) 
+end
+
 
 ;; | ========== PROVIDERS PROCEDURES ==========
 
@@ -202,29 +206,51 @@ end
 
 ;; | ========== CONSUMERS PROCEDURES ==========
 
-;; Returns reachable providers in radius of operation
-;; If none, ask acquaintance to find one (recursive)
-to-report find-providers [excluded_agents length_threshold]
+;; Returns reachable providers in radius of operation ;; If none, ask acquaintance to find one (recursive)
+to-report find-providers [excluded-agents length-threshold]
     if(count acquaintances > 0) [
         ;; First - Is there any providers nearby ?
         let _providers (acquaintances with [ breed = providers ])
 
         ;; Even if we already have providers, let's get others nearby
-        if (length_threshold > 0)[
+        if (length-threshold > 0)[
 
-            let _acquaintances (acquaintances with [ (not member? self excluded_agents) and (breed = consumers) ])
+            let _acquaintances (acquaintances with [ (not member? self excluded-agents) and (breed = consumers) ])
 
-            set excluded_agents (turtle-set self excluded_agents _acquaintances)
+            set excluded-agents (turtle-set self excluded-agents _acquaintances)
 
             ask _acquaintances[
                 set _providers (turtle-set
                     _providers
-                    find-providers (excluded_agents) (length_threshold - 1))
+                    find-providers (excluded-agents) (length-threshold - 1))
             ]
         ]
         report _providers
     ]
     report no-turtles
+end
+
+;; Returns witness for a specified provider
+to-report find-witness-ratings [excluded-agents length-threshold _provider]
+    let _ratings (get-ratings-from _provider)
+
+    ;; Si pas de ratings sur cet agent, on cherche d'autres témoins si la limite n'a pas été atteinte
+    if(length _ratings = 0 and length-threshold > 0)[
+
+        let witness (acquaintances with [ breed = consumers and not (member? self excluded-agents)])
+
+        ;; Is there some possible witnesses ?
+        if(count acquaintances > 0) [
+
+            set witness (min-n-of (min (list branching-factor (count witness))) witness [distance _provider])
+            set excluded-agents (turtle-set self excluded-agents witness)
+
+            ask witness[
+                set _ratings (sentence _ratings (find-witness-ratings excluded-agents (length-threshold - 1) _provider))
+            ]
+        ]
+    ]
+    report _ratings 
 end
 
 ;; Does the consumer need a service ?
@@ -286,11 +312,9 @@ to-report selection-process-FIRE
         let pExploitation ( exp ((expected_exploitation_return) / temperature) / normalization-term ) ;; Can not be used
 
         ifelse (flip-coin(pExploration))[
-            ;; Exploration
-            report one-of noTrustValue_agent
+            report one-of noTrustValue_agent ;; Exploration
         ][
-            ;; Exploitation
-            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent ;; Exploitation
         ]
     ]
 end
