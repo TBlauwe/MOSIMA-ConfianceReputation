@@ -78,11 +78,6 @@ end
 
 ;; | ========== GO RELATED ==========
 to interaction-round
-
-    ;; ===== PROFILING START =====
-    profiler:start
-    ;; ==========================
-
     ask providers[
         set counter-services-provided 0
         set performance-sum 0
@@ -113,9 +108,7 @@ to interaction-round
                 let provider_rating (new-rating self utility-gain-cache)
 
                 add-rating rating
-
-                ;; Inform provider of his rating
-                sent-rating _provider provider_rating
+                sent-rating _provider provider_rating ;; Inform provider of his rating
             ][
                 set counter-failed-interactions (counter-failed-interactions + 1)
             ]
@@ -124,12 +117,6 @@ to interaction-round
         ;; ===== Tick Update =====
         set temperature ifelse-value(temperature = 1) [temperature] [temperature - 1]
     ]
-
-    ;; ===== PROFILING STOP =====
-    profiler:stop
-    print profiler:report
-    profiler:reset
-    ;; ==========================
 end
 
 

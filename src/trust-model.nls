@@ -5,6 +5,108 @@
 
 
 ;; | ========== TRUST COMPONENTS ==========
+to-report compute-trust-value [agent]
+    let trust-values []
+    let wK []
+    let coeffs []
+
+    if(use-it?) [
+        let value trust-value-it agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (interaction-trust-coeff * (item 1 value)) wK)
+            set coeffs (fput interaction-trust-coeff coeffs)
+        ]
+    ]
+
+    if(use-cr?) [
+        let value trust-value-cr agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (certified-reputation-coeff * (item 1 value)) wK)
+            set coeffs (fput certified-reputation-coeff coeffs)
+        ]
+    ]
+
+    if(use-wr?) [
+        let value trust-value-wr agent
+        if(not empty? value)[
+            set trust-values (fput (item 0 value) trust-values)
+            set wK (fput (witness-reputation-coeff * (item 1 value)) wK)
+            set coeffs (fput witness-reputation-coeff coeffs)
+        ]
+    ]
+
+    if(not empty? trust-values and not empty? wK)[
+        let trust-value ( (sum (map * wK trust-values)) / (sum coeffs) )
+        let reliability ( (sum wK) / (sum coeffs) )
+
+        report (list trust-value reliability)
+    ]
+
+    report []
+end
+
+;; ========== IT ==========
+
+;; Return the following list (value, reliability) if computable
+to-report trust-value-it [agent]
+    let _ratings (table:get-or-default ratings ([who] of agent) [])
+
+    ifelse(length _ratings > 0)[
+        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
+        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
+        let _trust-value numerateur / denominateur
+                            
+        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
+
+        report (list (_trust-value) ((1 - exp ( - interaction-trust-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+    ][
+        report []
+    ]
+end
+
+
+;; IT Rating reliability
+to-report pr-it [rating]
+    report exp ( (- (ticks - get-time-from-rating rating) * (get-value-from-rating rating)) / recency-scaling-factor )
+end
+
+
+;; ========== CR ==========
+;; Same as IT except for the ratings collected
+to-report trust-value-cr [agent]
+    let _ratings [certificates] of agent
+
+    ifelse(length _ratings > 0)[
+        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
+        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
+        let _trust-value numerateur / denominateur
+                            
+        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
+
+        report (list (_trust-value) ((1 - exp ( - certified-reputation-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+    ][
+        report []
+    ]
+end
+
+
+;; ========== WR ==========
+to-report trust-value-wr [agent]
+    report []
+end
+
+;; WR Rating reliability
+to-report pr-wr [agentA agentB]
+    report 0
+end
+
+
+;; WR Deviation reliability
+to-report pd-wr [agentA agentB]
+    report 0
+end
 
 ;; | ========== RATINGS ==========
 to add-rating [rating]
@@ -29,21 +131,10 @@ to-report get-value-from-rating [rating]
     report item 2 rating
 end
 
+to-report get-ug-from-rating [rating]
+    report (item 2 rating) * 10
+end
+
 to-report new-rating [agent value]
     report (list ([who] of agent) ticks (value / 10))
 end
-
-to-report query [agent interaction value]
-  let useAgent (agent != "any")
-  let useInteraction (interaction != "any")
-  let useValue (value != "any")
-
-  let response (
-    filter [ elt ->
-      (ifelse-value(useAgent) [(item 0 elt) = agent] [true]) and
-      (ifelse-value(useInteraction) [(item 2 elt) = interaction] [true]) and
-      (ifelse-value(useValue) [(item 3 elt) = value] [true])
-    ] ratings )
-  report response
-end
-

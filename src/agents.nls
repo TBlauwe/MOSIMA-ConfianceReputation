@@ -108,6 +108,7 @@ to spawn-providers [_number _profile _color]
             set performance-min -5
             set performance-max 5
         ]
+        set performance-sum 0
 
         ;; --- Graphical
         set-xyz-inside-sphere               ;; Distribute turtles uniformely inside a sphere
@@ -164,23 +165,27 @@ end
 
 ;; Add a rating to his certificates. Keep the H (history-size) best ones
 to add-certificate [rating]
-    let sorted_certificates (sort-by [ [a b] -> (get-value-from-rating a) > (get-value-from-rating b)] (fput rating certificates))
-    set certificates sublist sorted_certificates 0 (min (list history-size (length sorted_certificates)))
+    let sorted_certificates (sort-by [ [a b] -> get-value-from-rating a > get-value-from-rating b] fput rating certificates)
+    set certificates sublist sorted_certificates 0 min (list history-size (length sorted_certificates))
 end
 
 ;; Returns a performance according to his profile
 to-report get-performance
-    let performance 0
-
     ifelse (profile = "intermittent")[
-        set performance (random-float-range performance-min performance-max)
+        report (random-float-range performance-min performance-max)
     ][
-        set performance max( list performance-min min (list performance-max (random-normal performance-mu performance-sigma)))
+        report max ( list performance-min min (list performance-max (random-normal performance-mu performance-sigma)))
     ]
+end
+
+;; Use a provider's service and get his performance
+to-report get-performance-from-service
+    let performance get-performance
 
     set performance-sum (performance-sum + performance)
     set counter-services-provided (counter-services-provided + 1)
-    report performance
+
+    report performance 
 end
 
 ;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
@@ -232,9 +237,67 @@ end
 ;; NoTrust - select randomly provider from the list.
 to-report select-provider
     if(trust-model = "FIRE") [
-        report one-of reachable-providers
+        report selection-process-FIRE
     ]
     report one-of reachable-providers
+end
+
+;; Returns the selected provider based on the trust model. See 137-138p.
+to-report selection-process-FIRE 
+
+    let hasTrustValue_value []
+    let hasTrustValue_agent []
+
+    let noTrustValue_agent []
+
+    ;; ===== STEP I =====
+    ;; Compute trustworthiness of each providers
+    ;; if computable
+    ;;    add to HasTrustValue
+    ;; else
+    ;;    add to NoTrustValue
+    foreach (sort reachable-providers) [ _provider ->
+        let value (compute-trust-value _provider)
+        ifelse (empty? value)[
+            set noTrustValue_agent (fput _provider noTrustValue_agent)
+        ][
+            set hasTrustValue_value fput (item 0 value) hasTrustValue_value
+            set hasTrustValue_agent (fput _provider hasTrustValue_agent)
+        ]
+    ]
+
+    ;; ===== STEP II =====
+    ;; If one is empty, choose the other
+    ;; else, exploitation-exploration dilemma
+    ifelse(empty? noTrustValue_agent or empty? hasTrustValue_agent)[
+        ifelse(empty? noTrustValue_agent)[
+            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+        ][
+            report one-of noTrustValue_agent
+        ]
+    ][
+
+        let expected_exploration_return ([get-performance] of (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent))
+        let expected_exploitation_return (mean [get-performance] of reachable-providers)
+
+        let normalization-term ( exp ((expected_exploitation_return) / temperature) + exp ((expected_exploration_return) / temperature))
+
+        let pExploration ( exp ((expected_exploration_return) / temperature ) / normalization-term ) 
+        let pExploitation ( exp ((expected_exploitation_return) / temperature) / normalization-term ) ;; Can not be used
+
+        ifelse (flip-coin(pExploration))[
+            ;; Exploration
+            report one-of noTrustValue_agent
+        ][
+            ;; Exploitation
+            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+        ]
+    ]
+end
+
+;; Get the performance of a provider, degraded by the distance
+to-report get-performance-from-provider [_provider]
+    report (service-quality-degradation (_provider) ([get-performance-from-service] of _provider))
 end
 
 ;; Inform the provider of his rating
@@ -253,7 +316,7 @@ end
 
 ;; Returns an utility gain based on provider's service quality
 to use-service [_provider]
-    set utility-gain-cache (service-quality-degradation (_provider) ([get-performance] of _provider))
+    set utility-gain-cache (get-performance-from-provider _provider)
     set counter-interactions counter-interactions + 1
     set utility-gain utility-gain + utility-gain-cache
 end
