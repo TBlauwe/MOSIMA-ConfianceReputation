@@ -68,6 +68,7 @@ to go
         [stop]
 
     interaction-round
+
     tick
 end
 
@@ -580,7 +581,7 @@ TEXTBOX
 PLOT
 1
 48
-252
+788
 198
 UG Mean
 Interaction
@@ -600,10 +601,10 @@ PENS
 "IT-WR" 1.0 0 -6459832 true "" "if(IT-WR-Group?) [\n    plot get-mean-UG-of-consumers \"IT-WR\"\n]"
 
 PLOT
-252
-48
-520
+1
 198
+269
+348
 Provider's Mean Performance
 Utility
 Units
@@ -621,10 +622,10 @@ PENS
 "intermittent" 1.0 1 -5825686 true "" "histogram get-mean-UG-of-providers \"intermittent\""
 
 PLOT
-520
-48
-750
+557
 198
+787
+348
 Consumer's Utility
 Utilty
 Units
@@ -643,10 +644,10 @@ PENS
 "IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\n    histogram get-last-UG-of-consumers \"IT-WR\"\n]"
 
 MONITOR
-225
-254
-369
-299
+269
+243
+413
+288
 Total Interaction
 sum [counter-interactions] of consumers
 17
@@ -654,10 +655,10 @@ sum [counter-interactions] of consumers
 11
 
 MONITOR
-225
-209
-369
-254
+269
+198
+413
+243
 Current Round
 ticks
 17
@@ -665,10 +666,10 @@ ticks
 11
 
 MONITOR
-225
-298
-369
-343
+269
+287
+413
+332
 Total Failed Interactions
 sum [counter-failed-interactions] of consumers
 17
@@ -764,10 +765,10 @@ NoTrust-Group?
 -1000
 
 MONITOR
-369
-254
-513
-299
+413
+243
+557
+288
 Number of consumers
 count consumers
 17
@@ -775,10 +776,10 @@ count consumers
 11
 
 MONITOR
-369
-209
-513
-254
+413
+198
+557
+243
 Number of providers
 count providers
 17
@@ -786,10 +787,10 @@ count providers
 11
 
 MONITOR
-369
-298
-513
-343
+413
+287
+557
+332
 Useless Consumer
 count consumers with [counter-failed-interactions > 0]
 17
@@ -799,7 +800,7 @@ count consumers with [counter-failed-interactions > 0]
 TEXTBOX
 -2
 10
-758
+822
 41
 ===========================================
 25
@@ -855,7 +856,7 @@ liar-per-group
 liar-per-group
 0
 100
-0.0
+14.5
 0.5
 1
 %
