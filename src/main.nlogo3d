@@ -60,6 +60,15 @@ to setup
       spawn-consumers number-of-consumers "FIRE" "FIRE" 15
     ]
 
+    ask providers[
+        set acquaintances ((other turtles) with [distance myself <= radius-of-operation])
+    ]
+
+    ask consumers[
+        set acquaintances ((other turtles) with [distance myself <= radius-of-operation])
+        set reachable-providers (find-providers (turtle-set self) (referral-length-threshold))
+    ]
+
     reset-ticks
 end
 
@@ -67,10 +76,46 @@ to go
     if (ticks >= number-of-rounds)
         [stop]
 
-    interaction-round
+    ask providers[
+        set counter-services-provided 0
+        set performance-sum 0
+    ]
+
+    ask consumers[
+        set has-interacted? false
+
+        if(need-service?)[
+
+            ;; reachable-providers is computed only when needed (When the consumer need an update)
+            ifelse(count reachable-providers > 0)[
+
+                set has-interacted? true
+
+                ;; Select a provider based on the trust model
+                let _provider select-provider
+
+                ;; Interact with the provider
+                use-service _provider
+
+                ;; Rate
+                let rating (new-rating _provider utility-gain-cache)
+                let provider_rating (new-rating self utility-gain-cache)
+
+                add-rating rating
+                sent-rating _provider provider_rating ;; Inform provider of his rating
+            ][
+                set counter-failed-interactions (counter-failed-interactions + 1)
+            ]
+        ]
+
+        ;; ===== Tick Update =====
+        ;; set temperature ifelse-value(temperature <= temperature-minimum) [temperature-minimum] [temperature * temperature-degradation-rate]
+        set temperature max (list  1 (temperature - 1))
+    ]
 
     tick
 end
+
 
 ;; | ========== GLOBALS RELATED ==========
 
@@ -134,54 +179,15 @@ to setup-globals
 end
 
 
-;; | ========== GO RELATED ==========
-to interaction-round
-    ask providers[
-        set counter-services-provided 0
-        set performance-sum 0
-
-        if(need-update?)[
-            update-provider
-        ]
-    ]
-
-    ask consumers[
-        if(need-update?)[
-            update-consumer
-        ]
-
-        if(need-service?)[
-
-            ;; reachable-providers is computed only when needed (When the consumer need an update)
-            ifelse(count reachable-providers > 0)[
-
-                ;; Select a provider based on the trust model
-                let _provider select-provider
-
-                ;; Interact with the provider
-                use-service _provider
-
-                ;; Rate
-                let rating (new-rating _provider utility-gain-cache)
-                let provider_rating (new-rating self utility-gain-cache)
-
-                add-rating rating
-                sent-rating _provider provider_rating ;; Inform provider of his rating
-            ][
-                set counter-failed-interactions (counter-failed-interactions + 1)
-            ]
-        ]
-
-        ;; ===== Tick Update =====
-        set temperature ifelse-value(temperature = 1) [temperature] [temperature - 1]
-    ]
-end
-
-
 ;; | ========== PLOT RELATED ==========
 
 to-report get-mean-UG-of-consumers [_group]
-    report mean ([utility-gain / max (list 1 counter-interactions)] of consumers with [group = _group and counter-failed-interactions = 0])
+    let agents (consumers with [group = _group and has-interacted? = true])
+    ifelse(count agents > 0)[
+        report mean ([utility-gain-cache] of agents)
+    ][
+        report 0
+    ]
 end
 
 to-report get-mean-UG-of-providers [_profile]
@@ -189,9 +195,8 @@ to-report get-mean-UG-of-providers [_profile]
 end
 
 to-report get-last-UG-of-consumers [_group]
-    report [utility-gain-cache] of consumers with [group = _group and counter-failed-interactions = 0]
+    report [utility-gain-cache] of consumers with [group = _group and has-interacted? = true]
 end
-
 
 ;; | ======================================================
 ;; | ====================== INTERFACE =====================
@@ -221,7 +226,7 @@ GRAPHICS-WINDOW
 -1
 1
 1
-0
+1
 1
 ticks
 30.0
@@ -272,10 +277,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-582
-559
-698
-619
+1366
+47
+1482
+107
 number-of-consumers
 500.0
 1
@@ -283,30 +288,30 @@ number-of-consumers
 Number
 
 TEXTBOX
-480
-704
-653
-722
+1245
+183
+1418
+201
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-105
-701
-298
-739
+899
+185
+1092
+223
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 SLIDER
-99
-798
-302
-831
+888
+276
+1093
+309
 min-activity-level
 min-activity-level
 0
@@ -318,10 +323,10 @@ chance
 HORIZONTAL
 
 SLIDER
-99
-834
-301
-867
+888
+308
+1093
+341
 max-activity-level
 max-activity-level
 0
@@ -333,10 +338,10 @@ chance
 HORIZONTAL
 
 INPUTBOX
-176
-944
-303
-1004
+940
+399
+1067
+459
 recency-scaling-factor
 7.21347520444
 1
@@ -344,10 +349,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-583
-622
-698
-682
+1367
+110
+1482
+170
 history-size
 10.0
 1
@@ -355,10 +360,10 @@ history-size
 Number
 
 INPUTBOX
-176
-1007
-303
+940
+462
 1067
+522
 branching-factor
 2.0
 1
@@ -366,10 +371,10 @@ branching-factor
 Number
 
 INPUTBOX
-176
-1069
-303
-1129
+940
+524
+1067
+584
 referral-length-threshold
 5.0
 1
@@ -377,10 +382,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-307
-944
-436
-1004
+1071
+399
+1200
+459
 interaction-trust-coeff
 2.0
 1
@@ -388,10 +393,10 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-307
-1007
-436
-1067
+1071
+462
+1200
+522
 witness-reputation-coeff
 2.0
 1
@@ -399,10 +404,10 @@ witness-reputation-coeff
 Number
 
 INPUTBOX
-307
-1069
-436
-1129
+1071
+524
+1200
+584
 certified-reputation-coeff
 0.5
 1
@@ -410,10 +415,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-440
-944
-588
-1004
+1204
+399
+1352
+459
 interaction-trust-reliability
 0.69314718056
 1
@@ -421,10 +426,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-440
-1007
-588
-1067
+1204
+462
+1352
+522
 witness-reputation-reliability
 0.69314718056
 1
@@ -432,10 +437,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-440
-1069
-588
-1129
+1204
+524
+1352
+584
 certified-reputation-reliability
 0.69314718056
 1
@@ -443,10 +448,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-208
-734
-302
-794
+888
+209
+990
+274
 consumers-shape
 person
 1
@@ -454,35 +459,15 @@ person
 String
 
 INPUTBOX
-428
-731
-513
-791
+1200
+210
+1285
+270
 providers-shape
 house
 1
 0
 String
-
-TEXTBOX
-0
-889
-762
-914
-====================================================
-25
-104.0
-1
-
-TEXTBOX
--1
-510
-769
-536
-==============================================
-25
-104.0
-1
 
 TEXTBOX
 86
@@ -495,10 +480,10 @@ TEXTBOX
 1
 
 SLIDER
-383
-559
-579
-592
+1167
+47
+1363
+80
 min-radius-of-operation
 min-radius-of-operation
 0
@@ -510,10 +495,10 @@ min-radius-of-operation
 HORIZONTAL
 
 SLIDER
-383
-594
-579
-627
+1167
+82
+1363
+115
 max-radius-of-operation
 max-radius-of-operation
 0
@@ -525,10 +510,10 @@ max-radius-of-operation
 HORIZONTAL
 
 INPUTBOX
-42
-559
-209
-619
+826
+47
+993
+107
 number-of-good-providers
 10.0
 1
@@ -536,10 +521,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-42
-622
-209
-682
+826
+110
+993
+170
 number-of-ordinary-providers
 40.0
 1
@@ -547,10 +532,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-212
-559
-379
-619
+996
+47
+1163
+107
 number-of-intermittent-providers
 5.0
 1
@@ -558,10 +543,10 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-212
-621
-379
-681
+996
+109
+1163
+169
 number-of-bad-providers
 45.0
 1
@@ -571,9 +556,9 @@ Number
 TEXTBOX
 0
 357
-759
-385
-============================================
+1511
+378
+===========================================================================================
 25
 104.0
 1
@@ -648,7 +633,7 @@ MONITOR
 243
 413
 288
-Total Interaction
+Interactions
 sum [counter-interactions] of consumers
 17
 1
@@ -665,22 +650,11 @@ ticks
 1
 11
 
-MONITOR
-269
-287
-413
-332
-Total Failed Interactions
-sum [counter-failed-interactions] of consumers
-17
-1
-11
-
 INPUTBOX
-521
-731
-693
-791
+1287
+210
+1459
+270
 service-quality-degradation-alpha
 0.5
 1
@@ -688,10 +662,10 @@ service-quality-degradation-alpha
 Number
 
 INPUTBOX
-99
-734
-201
-794
+991
+209
+1093
+274
 initial-temperature
 100.0
 1
@@ -743,20 +717,9 @@ FIRE-Group?
 -1000
 
 SWITCH
-140
+74
 396
-266
-429
-Use-Dynamic?
-Use-Dynamic?
-1
-1
--1000
-
-SWITCH
-14
-396
-140
+200
 429
 NoTrust-Group?
 NoTrust-Group?
@@ -786,23 +749,12 @@ count providers
 1
 11
 
-MONITOR
-413
-287
-557
-332
-Useless Consumer
-count consumers with [counter-failed-interactions > 0]
-17
-1
-11
-
 TEXTBOX
 -2
 10
-822
+1505
 41
-===========================================
+===========================================================================================
 25
 104.0
 0
@@ -828,39 +780,49 @@ TEXTBOX
 0
 
 TEXTBOX
-244
-511
-538
-544
+1008
+11
+1303
+44
   PARAMETERS - AGENTS  
 25
 104.0
 0
 
 TEXTBOX
-253
-891
-520
-920
+1008
+359
+1277
+388
   PARAMETERS - FIRE
 25
 104.0
 0
 
 SLIDER
-384
-629
-579
-662
+1168
+117
+1363
+150
 liar-per-group
 liar-per-group
 0
 100
-14.5
+0.0
 0.5
 1
 %
 HORIZONTAL
+
+TEXTBOX
+306
+460
+456
+502
+Setup takes some time (several minutes depending on your system)
+11
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?

@@ -23,8 +23,8 @@ providers-own [
     certificates                ;; Ratings to be shown as certificat        -  ^ IDEM ^
 
     ;; --- Misc 
-    need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
     counter-services-provided   ;; Count how many times does this agent provided a service during this round
+    liar                        ;; Is this agent a liar ?
 
     ;; --- Performance 
     performance-mu              ;; Normal distribution parameter
@@ -55,7 +55,7 @@ consumers-own [
     certificates                ;; Ratings to be shown as certificat        -  ^ IDEM ^
 
     ;; --- Misc 
-    need-update?                ;; Does it need to be need-update? ? (Just spawned or moved)
+    has-interacted?             ;; Dit it interact with a provider during this round ?
     counter-interactions        ;; Number of interaction
     counter-failed-interactions ;; Number of failed interaction (No providers found)
 ]
@@ -76,8 +76,13 @@ to spawn-providers [_number _profile _color]
         set certificates []
 
         ;; --- Misc 
-        set need-update? true     
         set counter-services-provided 0
+        ;; Pour respecter la proportion de menteurs par groupe :
+        set liar false
+
+        let proba-liar  ( (_number * (liar-per-group / 100 )) - (count providers with [liar = true and profile = _profile ]) ) /
+                        ( (_number) - (count providers with [profile = _profile]) + 1) 
+        if(flip-coin proba-liar)[ set liar true ]
 
         ;; --- Performance 
         set performance-mu (random-float-range (get-min profile) (get-max profile))
@@ -119,7 +124,7 @@ to spawn-consumers [_number _trust-model _group _color]
         set ratings table:make
 
         ;; --- Misc 
-        set need-update? true
+        set has-interacted? false
         set counter-interactions 0       
         set counter-failed-interactions 0 
 
@@ -133,15 +138,6 @@ end
 
 
 ;; | ========== SHARED PROCEDURES (Used by both agents) ==========
-to update
-    set acquaintances ((other turtles) with [distance myself <= radius-of-operation])
-    set need-update? false
-end
-
-to-report has-ratings-from [agent]
-    report table:has-key? ratings ([who] of agent) 
-end
-
 ;; Returns service's quality value after linear degradation : f(distance) = -(service-quality-degradation-alpha) * distance + world-width
 to-report service-quality-degradation [_provider _consumer performance]
     let _distance ([distance _consumer] of _provider)
@@ -175,9 +171,22 @@ to-report compute-performance
     report compute-performance-from-profile profile
 end
 
+;; For lying agents - Add a fake "good" certificates without degradation
+to generate-fake-certificate
+    let performance (compute-performance-from-profile "good")
+    add-certificate (new-rating (one-of consumers) performance)
+end
+
 ;; Get the expected performance of a provider, degraded by the distance
 to-report get-expected-performance [_consumer]
     report service-quality-degradation self _consumer compute-performance
+end
+
+to-report get-certificates
+    if(liar = true)[
+        generate-fake-certificate
+    ]
+    report certificates
 end
 
 ;; Use a provider's service and get his performance
@@ -188,10 +197,6 @@ to-report provide-service [_consumer]
     set counter-services-provided (counter-services-provided + 1)
 
     report get-expected-performance _consumer 
-end
-
-to update-provider
-    update
 end
 
 
@@ -274,10 +279,10 @@ end
 ;; Returns the selected provider based on the trust model. See 137-138p.
 to-report selection-process-FIRE 
 
-    let hasTrustValue_value []
-    let hasTrustValue_agent []
+    let best-provider-value -10
+    let best-provider nobody
 
-    let noTrustValue_agent []
+    let no-trust-value-agent []
 
     ;; ===== STEP I =====
     ;; Compute trustworthiness of each providers
@@ -288,37 +293,37 @@ to-report selection-process-FIRE
     foreach (sort reachable-providers) [ _provider ->
         let value (compute-trust-value _provider)
         ifelse (empty? value)[
-            set noTrustValue_agent (fput _provider noTrustValue_agent)
+            set no-trust-value-agent (fput _provider no-trust-value-agent)
         ][
-            set hasTrustValue_value fput (item 0 value) hasTrustValue_value
-            set hasTrustValue_agent (fput _provider hasTrustValue_agent)
+            let trust (item 0 value)
+            if(trust > best-provider-value)[
+                set best-provider-value trust 
+                set best-provider _provider 
+            ]
         ]
     ]
 
     ;; ===== STEP II =====
     ;; If one is empty, choose the other
     ;; else, exploitation-exploration dilemma
-    ifelse(empty? noTrustValue_agent or empty? hasTrustValue_agent)[
-        ifelse(empty? noTrustValue_agent)[
-            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent
+    ifelse(empty? no-trust-value-agent or best-provider = nobody)[
+        ifelse(empty? no-trust-value-agent)[
+            report best-provider
         ][
-            report one-of noTrustValue_agent
+            report one-of no-trust-value-agent 
         ]
     ][
-        let best-provider (item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent)
+        let expected-exploitation-return (best-provider-value * 10)
+        let expected-exploration-return (utility-gain / max (list 1 counter-interactions))
 
-        let expected_exploration_return ([get-expected-performance myself] of best-provider)
-        let expected_exploitation_return (mean [get-expected-performance myself] of reachable-providers)
+        let normalization-term ( exp ((expected-exploitation-return) / temperature) + exp ((expected-exploration-return) / temperature))
 
-        let normalization-term ( exp ((expected_exploitation_return) / temperature) + exp ((expected_exploration_return) / temperature))
-
-        let pExploration ( exp ((expected_exploration_return) / temperature ) / normalization-term ) 
-        let pExploitation ( exp ((expected_exploitation_return) / temperature) / normalization-term ) ;; Can not be used
+        let pExploration ( exp ((expected-exploration-return) / temperature ) / normalization-term ) 
 
         ifelse (flip-coin(pExploration))[
-            report one-of noTrustValue_agent ;; Exploration
+            report one-of no-trust-value-agent ;; Exploration
         ][
-            report item (position (max hasTrustValue_value) hasTrustValue_value) hasTrustValue_agent ;; Exploitation
+            report best-provider
         ]
     ]
 end
@@ -331,11 +336,6 @@ to sent-rating [agent rating]
     ]
 end
 
-;; Update some variables when environnement is changing (So at spawn and when dynamism is used)
-to update-consumer
-    update
-    set reachable-providers (find-providers (turtle-set self) (referral-length-threshold))
-end
 
 ;; Returns an utility gain based on provider's service quality
 to use-service [_provider]

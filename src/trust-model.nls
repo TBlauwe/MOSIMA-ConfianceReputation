@@ -8,14 +8,14 @@
 to-report compute-trust-value [agent]
     let trust-values []
     let wK []
-    let coeffs []
+    let coeffs 0
 
     if(use-it?) [
         let value trust-value-it agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
             set wK (fput (interaction-trust-coeff * (item 1 value)) wK)
-            set coeffs (fput interaction-trust-coeff coeffs)
+            set coeffs coeffs + interaction-trust-coeff
         ]
     ]
 
@@ -24,7 +24,7 @@ to-report compute-trust-value [agent]
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
             set wK (fput (certified-reputation-coeff * (item 1 value)) wK)
-            set coeffs (fput certified-reputation-coeff coeffs)
+            set coeffs coeffs + certified-reputation-coeff
         ]
     ]
 
@@ -33,13 +33,13 @@ to-report compute-trust-value [agent]
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
             set wK (fput (witness-reputation-coeff * (item 1 value)) wK)
-            set coeffs (fput witness-reputation-coeff coeffs)
+            set coeffs coeffs + witness-reputation-coeff
         ]
     ]
 
     if(not empty? trust-values and not empty? wK)[
-        let trust-value ( (sum (map * wK trust-values)) / (sum coeffs) )
-        let reliability ( (sum wK) / (sum coeffs) )
+        let trust-value  (sum (map * wK trust-values)) / (sum wK)
+        let reliability  (sum wK) / coeffs
 
         report (list trust-value reliability)
     ]
@@ -53,42 +53,14 @@ end
 to-report trust-value-it [agent]
     let _ratings (get-ratings-from agent)
 
-    ifelse(length _ratings > 0)[
-        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
-        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
-        let _trust-value numerateur / denominateur
-                            
-        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
-
-        report (list (_trust-value) ((1 - exp ( - interaction-trust-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
-    ][
-        report []
-    ]
+    report (trust-value-from _ratings interaction-trust-reliability)
 end
-
-
-;; IT Rating reliability
-to-report pr-it [rating]
-    report exp ( (- (ticks - get-time-from-rating rating) * (get-value-from-rating rating)) / recency-scaling-factor )
-end
-
 
 ;; ========== CR ==========
 ;; Same as IT except for the ratings collected
 to-report trust-value-cr [agent]
-    let _ratings [certificates] of agent
-
-    ifelse(length _ratings > 0)[
-        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
-        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
-        let _trust-value numerateur / denominateur
-                            
-        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
-
-        report (list (_trust-value) ((1 - exp ( - certified-reputation-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
-    ][
-        report []
-    ]
+    let _ratings [get-certificates] of agent
+    report (trust-value-from _ratings certified-reputation-reliability)
 end
 
 
@@ -96,29 +68,27 @@ end
 ;; Same as IT except for the ratings collected
 to-report trust-value-wr [agent]
     let _ratings (find-witness-ratings (turtle-set self) referral-length-threshold agent)
+    report (trust-value-from _ratings witness-reputation-reliability)
+end
 
+
+;; ========== SHARED ==========
+to-report weight-function [rating]
+    report exp ( ((get-time-from-rating rating) - ticks) / recency-scaling-factor )
+end
+
+to-report trust-value-from [_ratings reliability]
     ifelse(length _ratings > 0)[
-        let numerateur sum (map [[rating] -> (pr-it rating) * get-value-from-rating rating] _ratings)
-        let denominateur sum (map [[rating] -> (pr-it rating)] _ratings)
+        let numerateur sum (map [[rating] -> (weight-function rating) * get-value-from-rating rating] _ratings)
+        let denominateur sum (map [[rating] -> (weight-function rating)] _ratings)
         let _trust-value numerateur / denominateur
                             
-        let deviation-reliability sum (map [[rating] -> (pr-it rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
+        let deviation-reliability sum (map [[rating] -> (weight-function rating) * abs((get-value-from-rating rating) - _trust-value)] _ratings)
 
-        report (list (_trust-value) ((1 - exp ( - witness-reputation-reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
+        report (list (_trust-value) ((1 - exp ( - reliability * denominateur)) * (1 - 0.5 * (deviation-reliability / denominateur))))
     ][
         report []
     ]
-end
-
-;; WR Rating reliability
-to-report pr-wr [agentA agentB]
-    report 0
-end
-
-
-;; WR Deviation reliability
-to-report pd-wr [agentA agentB]
-    report 0
 end
 
 ;; | ========== RATINGS ==========
@@ -130,6 +100,10 @@ to add-rating [rating]
     ][
         table:put ratings id (list rating)
     ]
+end
+
+to-report has-ratings-from [agent]
+    report table:has-key? ratings ([who] of agent) 
 end
 
 ;; Returns ratings concerning an agent
