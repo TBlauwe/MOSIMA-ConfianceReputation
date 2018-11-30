@@ -49,10 +49,10 @@ consumers-own [
     ;; --- Knowledge
     acquaintances               ;; Neighbours in range of operation
     reachable-providers         ;; Providers that the agent can contact
+    reliability-factors         ;; For plotting
 
     ;; --- Memory 
     ratings                     ;; Associative arrays containing ratings    -  Key = ID of the the other agent - Value = [Time (int) , Rating (Float)]
-    certificates                ;; Ratings to be shown as certificat        -  ^ IDEM ^
 
     ;; --- Misc 
     has-interacted?             ;; Dit it interact with a provider during this round ?
@@ -65,7 +65,7 @@ consumers-own [
 to spawn-providers [_number _profile _color]
     create-providers _number[
         ;; --- General
-        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
+        set radius-of-operation (radius * (_radius-of-operation / 100))
         set profile _profile
 
         ;; --- Knowledge
@@ -99,7 +99,7 @@ end
 to spawn-consumers [_number _trust-model _group _color]
     create-consumers _number[
         ;; --- General
-        set radius-of-operation (radius * ((random-float-range min-radius-of-operation max-radius-of-operation) / 100))
+        set radius-of-operation (radius * (_radius-of-operation / 100))
         set activity-level (random-float-range min-activity-level max-activity-level)
         set utility-gain 0            
         set utility-gain-cache 0
@@ -122,6 +122,7 @@ to spawn-consumers [_number _trust-model _group _color]
 
         ;; --- Memory 
         set ratings table:make
+        set reliability-factors []
 
         ;; --- Misc 
         set has-interacted? false

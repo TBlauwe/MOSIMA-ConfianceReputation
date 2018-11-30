@@ -110,7 +110,7 @@ to go
 
         ;; ===== Tick Update =====
         ;; set temperature ifelse-value(temperature <= temperature-minimum) [temperature-minimum] [temperature * temperature-degradation-rate]
-        set temperature max (list  1 (temperature - 1))
+        set temperature max (list  0.1 (temperature - 0.01))
     ]
 
     tick
@@ -198,6 +198,26 @@ to-report get-last-UG-of-consumers [_group]
     report [utility-gain-cache] of consumers with [group = _group and has-interacted? = true]
 end
 
+to-report get-roI-of-FIRE
+    let agents (consumers with [group = "FIRE" and has-interacted? = true])
+    report mean ([(item 0 reliability-factors)] of agents)
+end
+
+to-report get-roR-of-FIRE
+    let agents (consumers with [group = "FIRE" and has-interacted? = true])
+    report mean ([(item 1 reliability-factors)] of agents)
+end
+
+to-report get-roW-of-FIRE
+    let agents (consumers with [group = "FIRE" and has-interacted? = true])
+    report mean ([(item 2 reliability-factors)] of agents)
+end
+
+to-report get-roT-of-FIRE
+    let agents (consumers with [group = "FIRE" and has-interacted? = true])
+    report mean ([(item 3 reliability-factors)] of agents)
+end
+
 ;; | ======================================================
 ;; | ====================== INTERFACE =====================
 ;; | ======================================================
@@ -232,10 +252,10 @@ ticks
 30.0
 
 BUTTON
-308
-425
-371
-458
+719
+385
+782
+418
 NIL
 setup
 NIL
@@ -249,10 +269,10 @@ NIL
 1
 
 BUTTON
-379
-425
-442
-458
+782
+385
+845
+418
 NIL
 go\n
 T
@@ -266,10 +286,10 @@ NIL
 1
 
 INPUTBOX
-491
-415
-590
-475
+862
+389
+961
+449
 number-of-rounds
 200.0
 1
@@ -277,10 +297,10 @@ number-of-rounds
 Number
 
 INPUTBOX
-1366
-47
-1482
-107
+908
+48
+1042
+108
 number-of-consumers
 500.0
 1
@@ -288,30 +308,30 @@ number-of-consumers
 Number
 
 TEXTBOX
-1245
-183
-1418
-201
+835
+242
+1008
+260
 PARAMETERS - PROVIDERS
 14
 104.0
 1
 
 TEXTBOX
-899
-185
-1092
-223
+585
+175
+778
+213
 PARAMETERS - CONSUMERS
 15
 104.0
 1
 
 SLIDER
-888
-276
-1093
-309
+574
+264
+777
+297
 min-activity-level
 min-activity-level
 0
@@ -323,10 +343,10 @@ chance
 HORIZONTAL
 
 SLIDER
-888
-308
-1093
-341
+574
+297
+777
+330
 max-activity-level
 max-activity-level
 0
@@ -338,10 +358,10 @@ chance
 HORIZONTAL
 
 INPUTBOX
-940
-399
-1067
-459
+1060
+48
+1187
+108
 recency-scaling-factor
 7.21347520444
 1
@@ -349,10 +369,10 @@ recency-scaling-factor
 Number
 
 INPUTBOX
-1367
-110
-1482
-170
+908
+107
+1042
+167
 history-size
 10.0
 1
@@ -360,10 +380,10 @@ history-size
 Number
 
 INPUTBOX
-940
-462
-1067
-522
+1060
+108
+1187
+168
 branching-factor
 2.0
 1
@@ -371,10 +391,10 @@ branching-factor
 Number
 
 INPUTBOX
-940
-524
-1067
-584
+1060
+167
+1187
+227
 referral-length-threshold
 5.0
 1
@@ -382,10 +402,10 @@ referral-length-threshold
 Number
 
 INPUTBOX
-1071
-399
-1200
-459
+1187
+48
+1316
+108
 interaction-trust-coeff
 2.0
 1
@@ -393,21 +413,21 @@ interaction-trust-coeff
 Number
 
 INPUTBOX
-1071
-462
-1200
-522
+1187
+108
+1316
+168
 witness-reputation-coeff
-2.0
+1.0
 1
 0
 Number
 
 INPUTBOX
-1071
-524
-1200
-584
+1187
+167
+1316
+227
 certified-reputation-coeff
 0.5
 1
@@ -415,10 +435,10 @@ certified-reputation-coeff
 Number
 
 INPUTBOX
-1204
-399
-1352
-459
+1316
+48
+1464
+108
 interaction-trust-reliability
 0.69314718056
 1
@@ -426,10 +446,10 @@ interaction-trust-reliability
 Number
 
 INPUTBOX
-1204
-462
-1352
-522
+1316
+108
+1464
+168
 witness-reputation-reliability
 0.69314718056
 1
@@ -437,10 +457,10 @@ witness-reputation-reliability
 Number
 
 INPUTBOX
-1204
-524
-1352
-584
+1316
+167
+1464
+227
 certified-reputation-reliability
 0.69314718056
 1
@@ -448,10 +468,10 @@ certified-reputation-reliability
 Number
 
 INPUTBOX
-888
-209
-990
-274
+574
+199
+676
+264
 consumers-shape
 person
 1
@@ -459,10 +479,10 @@ person
 String
 
 INPUTBOX
-1200
-210
-1285
-270
+789
+265
+874
+330
 providers-shape
 house
 1
@@ -480,27 +500,12 @@ TEXTBOX
 1
 
 SLIDER
-1167
-47
-1363
-80
-min-radius-of-operation
-min-radius-of-operation
-0
-100
-20.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-1167
-82
-1363
-115
-max-radius-of-operation
-max-radius-of-operation
+846
+167
+1042
+200
+_radius-of-operation
+_radius-of-operation
 0
 100
 20.0
@@ -510,10 +515,10 @@ max-radius-of-operation
 HORIZONTAL
 
 INPUTBOX
-826
-47
-993
-107
+574
+48
+741
+108
 number-of-good-providers
 10.0
 1
@@ -521,10 +526,10 @@ number-of-good-providers
 Number
 
 INPUTBOX
-826
-110
-993
-170
+574
+107
+741
+167
 number-of-ordinary-providers
 40.0
 1
@@ -532,10 +537,10 @@ number-of-ordinary-providers
 Number
 
 INPUTBOX
-996
-47
-1163
-107
+741
+48
+908
+108
 number-of-intermittent-providers
 5.0
 1
@@ -543,10 +548,10 @@ number-of-intermittent-providers
 Number
 
 INPUTBOX
-996
-109
-1163
-169
+741
+107
+908
+167
 number-of-bad-providers
 45.0
 1
@@ -554,10 +559,10 @@ number-of-bad-providers
 Number
 
 TEXTBOX
-0
+572
+336
+1063
 357
-1511
-378
 ===========================================================================================
 25
 104.0
@@ -566,8 +571,8 @@ TEXTBOX
 PLOT
 1
 48
-788
-198
+557
+199
 UG Mean
 Interaction
 UG Mean
@@ -587,9 +592,9 @@ PENS
 
 PLOT
 1
-198
-269
 348
+273
+498
 Provider's Mean Performance
 Utility
 Units
@@ -607,10 +612,10 @@ PENS
 "intermittent" 1.0 1 -5825686 true "" "histogram get-mean-UG-of-providers \"intermittent\""
 
 PLOT
-557
-198
-787
+273
 348
+557
+498
 Consumer's Utility
 Utilty
 Units
@@ -629,10 +634,10 @@ PENS
 "IT-WR" 1.0 1 -6459832 true "" "if(IT-WR-Group?) [\n    histogram get-last-UG-of-consumers \"IT-WR\"\n]"
 
 MONITOR
-269
-243
-413
-288
+274
+543
+418
+588
 Interactions
 sum [counter-interactions] of consumers
 17
@@ -640,10 +645,10 @@ sum [counter-interactions] of consumers
 11
 
 MONITOR
-269
-198
-413
-243
+274
+498
+418
+543
 Current Round
 ticks
 17
@@ -651,21 +656,21 @@ ticks
 11
 
 INPUTBOX
-1287
-210
-1459
-270
+874
+265
+1046
+330
 service-quality-degradation-alpha
-0.5
+0.25
 1
 0
 Number
 
 INPUTBOX
-991
-209
-1093
-274
+675
+199
+777
+264
 initial-temperature
 100.0
 1
@@ -673,10 +678,10 @@ initial-temperature
 Number
 
 SWITCH
-14
-429
-140
-462
+659
+463
+785
+496
 IT-Group?
 IT-Group?
 0
@@ -684,21 +689,21 @@ IT-Group?
 -1000
 
 SWITCH
-140
-429
-266
-462
+785
+463
+911
+496
 IT-WR-Group?
 IT-WR-Group?
-0
+1
 1
 -1000
 
 SWITCH
-14
-462
-140
-495
+659
+496
+785
+529
 IT-CR-Group?
 IT-CR-Group?
 1
@@ -706,10 +711,10 @@ IT-CR-Group?
 -1000
 
 SWITCH
-140
-462
-266
-495
+785
+496
+911
+529
 FIRE-Group?
 FIRE-Group?
 1
@@ -717,10 +722,10 @@ FIRE-Group?
 -1000
 
 SWITCH
-74
-396
-200
-429
+719
+430
+845
+463
 NoTrust-Group?
 NoTrust-Group?
 0
@@ -728,10 +733,10 @@ NoTrust-Group?
 -1000
 
 MONITOR
-413
-243
+418
+543
 557
-288
+588
 Number of consumers
 count consumers
 17
@@ -739,10 +744,10 @@ count consumers
 11
 
 MONITOR
-413
-198
+418
+498
 557
-243
+543
 Number of providers
 count providers
 17
@@ -750,9 +755,9 @@ count providers
 11
 
 TEXTBOX
--2
+1
 10
-1505
+1468
 41
 ===========================================================================================
 25
@@ -760,9 +765,9 @@ TEXTBOX
 0
 
 TEXTBOX
-322
+219
 10
-432
+329
 41
   STATS  
 25
@@ -770,40 +775,40 @@ TEXTBOX
 0
 
 TEXTBOX
-308
-356
-449
-387
+717
+340
+860
+371
   ACTIONS  
 25
 104.0
 0
 
 TEXTBOX
-1008
-11
-1303
-44
+650
+10
+955
+43
   PARAMETERS - AGENTS  
 25
 104.0
 0
 
 TEXTBOX
-1008
-359
-1277
-388
+1134
+10
+1403
+39
   PARAMETERS - FIRE
 25
 104.0
 0
 
 SLIDER
-1168
-117
-1363
-150
+846
+200
+1042
+233
 liar-per-group
 liar-per-group
 0
@@ -815,14 +820,35 @@ liar-per-group
 HORIZONTAL
 
 TEXTBOX
-306
-460
-456
-502
+597
+388
+701
+449
 Setup takes some time (several minutes depending on your system)
 11
 0.0
 1
+
+PLOT
+1
+198
+557
+348
+Reliability factors
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"roI" 1.0 0 -16777216 true "" "if (FIRE-Group?) [plot get-roI-of-FIRE]"
+"roR" 1.0 0 -7500403 true "" "if (FIRE-Group?) [plot get-roR-of-FIRE]"
+"roW" 1.0 0 -2674135 true "" "if (FIRE-Group?) [plot get-roW-of-FIRE]"
+"roT" 1.0 0 -955883 true "" "if (FIRE-Group?) [plot get-roT-of-FIRE]"
 
 @#$#@#$#@
 ## WHAT IS IT?
