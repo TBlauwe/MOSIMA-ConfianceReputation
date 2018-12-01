@@ -1502,7 +1502,7 @@ need-to-manually-make-preview-for-this-model
     <setup>setup</setup>
     <go>go</go>
     <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-temperature-run-" behaviorspace-run-number ".csv")</final>
-    <metric>get-mean-all-UG-of-consumers "FIRE"</metric>
+    <metric>get-mean-UG-of-consumers "FIRE"</metric>
     <enumeratedValueSet variable="initial-temperature">
       <value value="1"/>
     </enumeratedValueSet>
