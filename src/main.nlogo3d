@@ -200,22 +200,30 @@ end
 
 to-report get-roI-of-FIRE
     let agents (consumers with [group = "FIRE" and has-interacted? = true])
-    report mean ([(item 0 reliability-factors)] of agents)
+    ifelse(count agents > 0)[
+        report mean ([(item 0 reliability-factors)] of agents)
+  ][ report 0 ]
 end
 
 to-report get-roR-of-FIRE
     let agents (consumers with [group = "FIRE" and has-interacted? = true])
-    report mean ([(item 1 reliability-factors)] of agents)
+    ifelse(count agents > 0)[
+        report mean ([(item 1 reliability-factors)] of agents)
+    ][ report 0 ]
 end
 
 to-report get-roW-of-FIRE
     let agents (consumers with [group = "FIRE" and has-interacted? = true])
-    report mean ([(item 2 reliability-factors)] of agents)
+    ifelse(count agents > 0)[
+        report mean ([(item 2 reliability-factors)] of agents)
+    ][ report 0 ]
 end
 
 to-report get-roT-of-FIRE
     let agents (consumers with [group = "FIRE" and has-interacted? = true])
-    report mean ([(item 3 reliability-factors)] of agents)
+    ifelse(count agents > 0)[
+        report mean ([(item 3 reliability-factors)] of agents)
+    ][ report 0 ]
 end
 
 ;; | ======================================================
@@ -225,8 +233,8 @@ end
 GRAPHICS-WINDOW
 0
 0
-47
-48
+73
+74
 -1
 -1
 13.0
@@ -239,12 +247,12 @@ GRAPHICS-WINDOW
 1
 1
 1
--1
-1
--1
-1
--1
-1
+-2
+2
+-2
+2
+-2
+2
 1
 1
 1
@@ -838,10 +846,10 @@ Reliability factors
 NIL
 NIL
 0.0
-10.0
-0.0
-10.0
-true
+200.0
+-1.0
+1.0
+false
 true
 "" ""
 PENS
@@ -1197,6 +1205,188 @@ NetLogo 3D 6.0.4
 need-to-manually-make-preview-for-this-model
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="AS-service-degradation-alpha" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <final>export-plot "UG Mean" (word "c:/Users/Hyperenor/Documents/temp/AS-service-quality-degradation-alpha-" date-and-time ".csv")</final>
+    <enumeratedValueSet variable="initial-temperature">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-rounds">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="referral-length-threshold">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="recency-scaling-factor">
+      <value value="7.21347520444"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-good-providers">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="FIRE-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-CR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="liar-per-group">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-consumers">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="history-size">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="providers-shape">
+      <value value="&quot;house&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-bad-providers">
+      <value value="45"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-coeff">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="_radius-of-operation">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="NoTrust-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-coeff">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-intermittent-providers">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="branching-factor">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-coeff">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-ordinary-providers">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-activity-level">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="service-quality-degradation-alpha" first="0" step="0.1" last="1"/>
+    <enumeratedValueSet variable="IT-WR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-activity-level">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="consumers-shape">
+      <value value="&quot;person&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="AS-radius-of-operation" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-radius-of-operation-" date-and-time ".csv")</final>
+    <enumeratedValueSet variable="initial-temperature">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-rounds">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="referral-length-threshold">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="recency-scaling-factor">
+      <value value="7.21347520444"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-good-providers">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="FIRE-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-CR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="liar-per-group">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-consumers">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="history-size">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="providers-shape">
+      <value value="&quot;house&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-bad-providers">
+      <value value="45"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-coeff">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="_radius-of-operation" first="5" step="2" last="25"/>
+    <enumeratedValueSet variable="NoTrust-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-coeff">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-intermittent-providers">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="branching-factor">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-coeff">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-ordinary-providers">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-activity-level">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="service-quality-degradation-alpha">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-WR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-activity-level">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="consumers-shape">
+      <value value="&quot;person&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default

@@ -122,7 +122,7 @@ to spawn-consumers [_number _trust-model _group _color]
 
         ;; --- Memory 
         set ratings table:make
-        set reliability-factors []
+        set reliability-factors (list 0 0 0 0)
 
         ;; --- Misc 
         set has-interacted? false

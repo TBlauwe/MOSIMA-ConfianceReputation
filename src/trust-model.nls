@@ -9,13 +9,12 @@ to-report compute-trust-value [agent]
     let trust-values []
     let wK []
     let coeffs 0
-    let _reliability-factors []
 
     if(use-it?) [
         let value trust-value-it agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
-            set _reliability-factors (lput (item 1 value) _reliability-factors)
+            set reliability-factors (replace-item 0 reliability-factors (item 1 value))
             set wK (fput (interaction-trust-coeff * (item 1 value)) wK)
             set coeffs coeffs + interaction-trust-coeff
         ]
@@ -25,7 +24,7 @@ to-report compute-trust-value [agent]
         let value trust-value-cr agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
-            set _reliability-factors (lput (item 1 value) _reliability-factors)
+            set reliability-factors (replace-item 1 reliability-factors (item 1 value))
             set wK (fput (certified-reputation-coeff * (item 1 value)) wK)
             set coeffs coeffs + certified-reputation-coeff
         ]
@@ -35,7 +34,7 @@ to-report compute-trust-value [agent]
         let value trust-value-wr agent
         if(not empty? value)[
             set trust-values (fput (item 0 value) trust-values)
-            set _reliability-factors (lput (item 1 value) _reliability-factors)
+            set reliability-factors (replace-item 2 reliability-factors (item 1 value))
             set wK (fput (witness-reputation-coeff * (item 1 value)) wK)
             set coeffs coeffs + witness-reputation-coeff
         ]
@@ -44,7 +43,7 @@ to-report compute-trust-value [agent]
     if(not empty? trust-values and not empty? wK)[
         let trust-value  (sum (map * wK trust-values)) / (sum wK)
         let reliability  (sum wK) / coeffs
-        set reliability-factors (lput reliability _reliability-factors)
+        set reliability-factors (replace-item 3 reliability-factors reliability)
 
         report (list trust-value reliability)
     ]
@@ -57,7 +56,6 @@ end
 ;; Return the following list (value, reliability) if computable
 to-report trust-value-it [agent]
     let _ratings (get-ratings-from agent)
-
     report (trust-value-from _ratings interaction-trust-reliability)
 end
 
