@@ -669,7 +669,7 @@ INPUTBOX
 1046
 330
 service-quality-degradation-alpha
-0.25
+0.5
 1
 0
 Number
@@ -1209,7 +1209,7 @@ need-to-manually-make-preview-for-this-model
   <experiment name="AS-service-degradation-alpha" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
-    <final>export-plot "UG Mean" (word "c:/Users/Hyperenor/Documents/temp/AS-service-quality-degradation-alpha-" date-and-time ".csv")</final>
+    <final>export-plot "UG Mean" (word "c:/Users/Hyperenor/Documents/temp/AS-service-quality-degradation-alpha-run-" behaviorspace-run-number ".csv")</final>
     <enumeratedValueSet variable="initial-temperature">
       <value value="100"/>
     </enumeratedValueSet>
@@ -1299,7 +1299,7 @@ need-to-manually-make-preview-for-this-model
   <experiment name="AS-radius-of-operation" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
-    <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-radius-of-operation-" date-and-time ".csv")</final>
+    <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-radius-of-operation-run-" behaviorspace-run-number ".csv")</final>
     <enumeratedValueSet variable="initial-temperature">
       <value value="100"/>
     </enumeratedValueSet>
