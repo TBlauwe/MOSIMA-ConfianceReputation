@@ -669,7 +669,7 @@ INPUTBOX
 1046
 330
 service-quality-degradation-alpha
-0.5
+0.25
 1
 0
 Number
@@ -680,7 +680,7 @@ INPUTBOX
 777
 264
 initial-temperature
-100.0
+1.0
 1
 0
 Number
@@ -1210,6 +1210,7 @@ need-to-manually-make-preview-for-this-model
     <setup>setup</setup>
     <go>go</go>
     <final>export-plot "UG Mean" (word "c:/Users/Hyperenor/Documents/temp/AS-service-quality-degradation-alpha-run-" behaviorspace-run-number ".csv")</final>
+    <metric>get-mean-UG-of-consumers "FIRE"</metric>
     <enumeratedValueSet variable="initial-temperature">
       <value value="100"/>
     </enumeratedValueSet>
@@ -1300,6 +1301,7 @@ need-to-manually-make-preview-for-this-model
     <setup>setup</setup>
     <go>go</go>
     <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-radius-of-operation-run-" behaviorspace-run-number ".csv")</final>
+    <metric>get-mean-UG-of-consumers "FIRE"</metric>
     <enumeratedValueSet variable="initial-temperature">
       <value value="100"/>
     </enumeratedValueSet>
@@ -1348,6 +1350,98 @@ need-to-manually-make-preview-for-this-model
     <steppedValueSet variable="_radius-of-operation" first="5" step="2" last="25"/>
     <enumeratedValueSet variable="NoTrust-Group?">
       <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-coeff">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-intermittent-providers">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="branching-factor">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-coeff">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="interaction-trust-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-ordinary-providers">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-activity-level">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="service-quality-degradation-alpha">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-WR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-activity-level">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="consumers-shape">
+      <value value="&quot;person&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="AS-temperature" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <final>export-plot "UG Mean"  (word "c:/Users/Hyperenor/Documents/temp/AS-temperature-run-" behaviorspace-run-number ".csv")</final>
+    <metric>get-mean-UG-of-consumers "FIRE"</metric>
+    <metric>get-mean-UG-of-consumers "IT"</metric>
+    <steppedValueSet variable="initial-temperature" first="0.1" step="0.25" last="2"/>
+    <enumeratedValueSet variable="number-of-rounds">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="referral-length-threshold">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="witness-reputation-reliability">
+      <value value="0.69314718056"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="recency-scaling-factor">
+      <value value="7.21347520444"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-good-providers">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="FIRE-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-CR-Group?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="liar-per-group">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="IT-Group?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-consumers">
+      <value value="500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="history-size">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="providers-shape">
+      <value value="&quot;house&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-bad-providers">
+      <value value="45"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="certified-reputation-coeff">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="_radius-of-operation">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="NoTrust-Group?">
+      <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="certified-reputation-reliability">
       <value value="0.69314718056"/>
